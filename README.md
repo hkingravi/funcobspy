@@ -13,15 +13,34 @@ be generalized, and will include deep neural networks.
 
 # Setup
 
-To get this repo, and to install all of the dependencies, run the following commands.
+To get this repo, and to install all of the dependencies, run the following commands on OSX or Ubuntu.
 
 ```bash
 git clone https://github.com/hkingravi/funcobspy.git  # clone repo (https)
 cd funcobspy
 virtualenv funcenv  # create virtual environment with all the of dependencies required
 source funcenv/bin/activate  # activate virtual environment
+pip install -U virtualenv  # upgrade virtualenv
+pip install -U pip  # upgrade pip: these upgrades are to avoid weird bugs in some installs
 chmod +x install_dependencies.sh  # make install script an executable
 ./install_dependencies.sh  # install all reqs using pip, fix matplotlib backend issue
 python setup.py develop  #  install funcobspy in a development environment
 ```
+
+Ensure that your Keras library is using the Theano backend by typing
+```bash
+nano ~/.keras/keras.json
+```
+and changing the "backend" field to "theano".
+
+Now, when you run your python code, you can either activate the virtualenv via the command line
+with the command 
+```bash
+source funcenv/bin/activate
+```
+in the same directory as funcenv, or you can configure your Python IDE to use this interpreter. That
+way, all the library requirements will be met. If you want to roll your own version, just look at the
+requirements.txt file. 
+
+
 
