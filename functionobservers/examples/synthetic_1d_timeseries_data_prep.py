@@ -12,8 +12,8 @@ def animate_orig_data(i):
     plot_line.set_ydata(np.squeeze(orig_plot_vals[:, :, i]))
     return orig_line, plot_line
 
-m_filename = "./data/synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme_switching2.mat"
-p_filename = "./data/synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme_switching2.pkl"
+m_filename = "./data/synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme_switching.mat"
+p_filename = "./data/synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme_switching.pkl"
 data_dict = loadmat(m_filename)
 orig_obs = data_dict['orig_func_obs']
 orig_data = data_dict['orig_func_data']
@@ -35,9 +35,10 @@ data_out_dict = {'orig_func_obs': new_obs, 'orig_func_data': new_data, 'orig_fun
 
 for i in xrange(nsteps):
     data_out_dict['orig_func_obs'][:, :, i] = np.reshape(data_dict['orig_func_obs'][:, :, i], (nsamp, obs_dim))
-    data_out_dict['orig_func_data'] = np.reshape(data_dict['orig_func_data'][:, :, i], (nsamp, data_dim))
+    data_out_dict['orig_func_data'][:, :, i] = np.reshape(data_dict['orig_func_data'][:, :, i], (nsamp, data_dim))
     data_out_dict['orig_func_plot_vals'][:, :, i] = \
         np.reshape(data_dict['orig_func_plot_vals'][:, :, i], (nplot, plot_dim))
+
 pickle.dump(data_out_dict, open(p_filename, "wb"))
 
 # plot outputs
