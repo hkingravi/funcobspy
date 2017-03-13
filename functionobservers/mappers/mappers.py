@@ -8,6 +8,8 @@ from keras.models import Sequential
 
 class Mapper:
     """
+    .. codeauthor:: Hassan A. Kingravi <hkingravi@gmail.com>
+
     This class needs to be able to map input data to a transformed feature space
     where the dynamics model can be learned. Even though it's something of a misnomer,
     we require the class to be able to compute predictions as well.
@@ -57,11 +59,11 @@ class DNN(Mapper):
         pass
 
     def fit(self, data, obs, **kwargs):
-        print kwargs
         self.model.fit(data, obs, **kwargs)
+        return self
 
     def predict(self, data, **kwargs):
-        pass
+        return self.model.predict(data, **kwargs)
 
     def score(self, data, labels, **kwargs):
         return self.model.evaluate(data, labels, **kwargs)
