@@ -1,5 +1,5 @@
 """
-
+Given a time-series, learn a DNN model every time step, and output the results.
 """
 import os
 import cPickle as pickle
