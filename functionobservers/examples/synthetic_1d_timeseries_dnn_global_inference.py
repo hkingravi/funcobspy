@@ -9,6 +9,7 @@ import time
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
+from functionobservers.utils import map_data
 
 
 def init_regular_model(nn_layer1=100, nn_layer2=50):
@@ -16,7 +17,9 @@ def init_regular_model(nn_layer1=100, nn_layer2=50):
     model = Sequential()
     model.add(Dense(nn_layer1, input_shape=(1,), init='normal', activation='relu'))
     model.add(Dense(nn_layer2, init='normal', activation='relu'))
-    model.add(Dense(1, init='normal'))
+    last_layer = Dense(1, init='normal')
+    last_layer.use_bias = False
+    model.add(last_layer)
 
     # Compile model
     model.compile(loss='mean_squared_error', optimizer='adam')
@@ -33,6 +36,7 @@ def init_frozen_model(model_in, nn_layer1=100, nn_layer2=50):
     layer1 = Dense(nn_layer2, init='normal', activation='relu',
                    weights=model_in.layers[1].get_weights(), trainable=False)
     layer2 = Dense(1, init='normal')
+    layer2.use_bias = False
 
     # add layers and compile
     model.add(layer0)
@@ -41,9 +45,6 @@ def init_frozen_model(model_in, nn_layer1=100, nn_layer2=50):
     model.compile(loss='mean_squared_error', optimizer='adam')
     return model
 
-
-def map_forward(model_in, data):
-    curr_map = model_in.layers[0].
 
 # file and directory information
 data_dir = "./data/"
