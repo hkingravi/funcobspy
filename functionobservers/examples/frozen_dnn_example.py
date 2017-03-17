@@ -1,14 +1,10 @@
-"""
-Given a time-series, learn a global DNN model over all of the time steps: the goal here is to learn
-proper representations for the first two layers. Finally, freeze the weights for the input layers,
-and learn a new series of weights for the output layer per time step.
-"""
 import os
 import cPickle as pickle
-import time
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
+import matplotlib.pyplot as plt
+
 from functionobservers.mappers import FrozenDenseDNN
 
 
@@ -25,7 +21,7 @@ def init_regular_model(nn_layer1=100, nn_layer2=50):
     model.compile(loss='mean_squared_error', optimizer='adam')
     return model
 
-
+model = init_regular_model()
 # file and directory information
 data_dir = "./data/"
 out_dir = "./results/"
@@ -36,7 +32,6 @@ f_scheme = "switching"
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 loadfile = os.path.join(data_dir, f_prefix + "_" + f_scheme + ".pkl")
-savefile = os.path.join(out_dir, "synt_1d_timeseries_dnn_global_results_" + f_scheme + ".pkl")
 
 data_dict = pickle.load(open(loadfile, "rb"))
 orig_obs = data_dict['orig_func_obs']
@@ -58,34 +53,32 @@ pred_plot_vals = np.zeros(orig_plot_vals.shape)
 
 nlayer1 = 100
 nlayer2 = 50
-frozen_weight_vals = np.zeros((nlayer2, nsteps))
-
-nframes = nsteps
-s_t = time.time()
-
 nepochs = 1000
 batch_size = 200
 nn_shape = (nlayer1, nlayer2)
 be_shape = (batch_size, nepochs)
-print "Inferring global DNN with layers " + str(nn_shape) + " over " + str(nsteps) + \
+print "Inferring DNN with layers " + str(nn_shape) + " over " + str(nsteps) + \
       " steps with (batch_size, nepochs) = " + str(be_shape)
 
-# fit global data to learn overall representation
-rand_perms = np.random.permutation(nsteps*nsamp)
-global_data = orig_data.reshape((data_dim, nsteps*nsamp)).T[rand_perms]
-global_obs = orig_obs.reshape((obs_dim, nsteps*nsamp)).T[rand_perms]
-global_model = init_regular_model(nn_layer1=nlayer1, nn_layer2=nlayer2)
-global_model.fit(global_data, global_obs, batch_size=batch_size, nb_epoch=nepochs, verbose=1)
+# train regular model
+curr_model = init_regular_model(nn_layer1=nlayer1, nn_layer2=nlayer2)
+curr_data = orig_data[:, :, 0]
+curr_obs = orig_obs[:, :, 0]
+curr_plot_vals = orig_plot_vals[:, :, 0]
+curr_model.fit(curr_data, curr_obs, batch_size=batch_size, nb_epoch=nepochs, verbose=1)
+curr_preds = curr_model.predict(plot_data_in)
 
-# now go through each step, initializing new models, and freezing the first few layers
-for i in xrange(nframes):
-    print "Step ", i
-    curr_model = FrozenDenseDNN(global_model)
-    curr_model.fit(orig_data[:, :, i], orig_obs[:, :, i])
-    pred_plot_vals[:, :, i] = curr_model.predict(plot_data_in)
-    frozen_weight_vals[:, i] = np.squeeze(curr_model.weights)  # weights of penultimate layer
+# train frozen model
+frozen_model = FrozenDenseDNN(curr_model)
+frozen_model.fit(curr_data, curr_obs)
+frozen_preds = frozen_model.predict(plot_data_in)
 
-print "Time taken: " + str(time.time()) + " seconds."
-data_out_dict = {'plot_data': plot_data, "pred_plot_vals": pred_plot_vals,
-                 'frozen_weights': frozen_weight_vals}
-pickle.dump(data_out_dict, open(savefile, "wb"))
+plt.figure()
+plt.plot(curr_data, curr_obs, 'ro', label='obs')
+plt.plot(plot_data_in, curr_plot_vals, 'k-', linewidth=3.0, label='actual')
+plt.plot(plot_data_in, curr_preds, 'b-', linewidth=3.0, label='model preds')
+plt.plot(plot_data_in, frozen_preds, 'g-', linewidth=3.0, label='frozen preds')
+plt.legend()
+
+plt.show()
+

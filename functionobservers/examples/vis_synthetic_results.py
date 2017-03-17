@@ -24,6 +24,14 @@ def animate_local_pred_data(ii):
     return plot_line2, pred_line
 
 
+def animate_linear_pred_data(ii):
+    plot_line_lin.set_xdata(plot_data)
+    plot_line_lin.set_ydata(np.squeeze(orig_plot_vals[:, :, ii]))
+    pred_line_lin.set_xdata(plot_data)
+    pred_line_lin.set_ydata(np.squeeze(pred_linear_plot_vals[:, :, ii]))
+    return plot_line_lin, pred_line_lin
+
+
 def animate_global_pred_data(ii):
     plot_line3.set_xdata(plot_data)
     plot_line3.set_ydata(np.squeeze(orig_plot_vals[:, :, ii]))
@@ -37,14 +45,20 @@ results_dir = "./results/"
 f_prefix = "synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme"
 f_scheme = "switching"
 
+show_orig = True
+show_local_pred = True
+show_global_pred = True
+show_linear_pred = True
+show_final_weights = False
+show_mid_layer_weights = False
+
+
 # load files
 loadfile_orig = os.path.join(data_dir, f_prefix + "_" + f_scheme + ".pkl")
 loadfile_local = os.path.join(results_dir, "synt_1d_timeseries_dnn_results_" + f_scheme + ".pkl")
-loadfile_global = os.path.join(results_dir, "synt_1d_timeseries_dnn_global_results_" + f_scheme + ".pkl")
 
 orig_data_dict = pickle.load(open(loadfile_orig, "rb"))
 data_dict = pickle.load(open(loadfile_local, "rb"))
-data_global_dict = pickle.load(open(loadfile_global, "rb"))
 
 orig_obs = orig_data_dict['orig_func_obs']
 orig_data = orig_data_dict['orig_func_data']
@@ -67,17 +81,21 @@ pred_plot_vals = data_dict['pred_plot_vals']
 output_local_weight_vals = data_dict['output_layer_weights']
 mid_weight_vals = data_dict['mid_layer_weights']
 
-pred_global_plot_vals = data_global_dict['pred_plot_vals']
-output_global_weight_vals = data_global_dict['output_layer_weights']
+if show_linear_pred:
+    loadfile_linear = os.path.join(results_dir, "synt_1d_timeseries_dnn_linear_results_" + f_scheme + ".pkl")
+    data_linear_dict = pickle.load(open(loadfile_linear, "rb"))
+    pred_linear_plot_vals = data_linear_dict['pred_plot_vals']
+    output_linear_weight_vals = data_linear_dict['frozen_weights']
+
+if show_global_pred:
+    loadfile_global = os.path.join(results_dir, "synt_1d_timeseries_dnn_global_results_" + f_scheme + ".pkl")
+    data_global_dict = pickle.load(open(loadfile_global, "rb"))
+    pred_global_plot_vals = data_global_dict['pred_plot_vals']
+    output_global_weight_vals = data_global_dict['frozen_weights']
+
 
 # plotting
 nframes = nsteps
-show_orig = True
-show_local_pred = True
-show_global_pred = True
-show_final_weights = True
-show_mid_layer_weights = False
-
 mid_weight_vals = mid_weight_vals.reshape(5000, 666)
 
 if show_orig:
@@ -96,7 +114,7 @@ if show_orig:
 if show_local_pred:
     fig2 = plt.figure()
     fig2.suptitle('Original function and predictions (local vs global)', fontsize=15)
-    ax2 = fig2.add_subplot(121)
+    ax2 = fig2.add_subplot(131)
     plot_line2, = ax2.plot([], [], 'b', label='function', linewidth=3.0)
     pred_line, = ax2.plot([], [], 'g-', label='local', linewidth=3.0)
     ax2.set_xlim(data_start, data_end)
@@ -106,10 +124,22 @@ if show_local_pred:
     ani_pred = animation.FuncAnimation(fig2, animate_local_pred_data, frames=nframes, fargs=(),
                                        interval=100, blit=True)
 
+if show_linear_pred:
+    ax_lin = fig2.add_subplot(132)
+    plot_line_lin, = ax_lin.plot([], [], 'b', label='function', linewidth=3.0)
+    pred_line_lin, = ax_lin.plot([], [], 'g-', label='linear', linewidth=3.0)
+    ax_lin.set_xlim(data_start, data_end)
+    ax_lin.set_ylim(-3, 3)
+    handles, labels = ax_lin.get_legend_handles_labels()
+    ax_lin.legend(handles, labels)
+    ani_pred_lin = animation.FuncAnimation(fig2, animate_linear_pred_data, frames=nframes, fargs=(),
+                                           interval=100, blit=True)
+
+
 if show_global_pred:
     #fig3 = plt.figure()
     #fig3.suptitle('Original function and predictions (global)', fontsize=15)
-    ax3 = fig2.add_subplot(122)
+    ax3 = fig2.add_subplot(133)
     plot_line3, = ax3.plot([], [], 'b', label='function', linewidth=3.0)
     pred_line2, = ax3.plot([], [], 'g-', label='global', linewidth=3.0)
     ax3.set_xlim(data_start, data_end)
