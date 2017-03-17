@@ -66,6 +66,7 @@ nepochs = 1000
 batch_size = 200
 nn_shape = (nlayer1, nlayer2)
 be_shape = (batch_size, nepochs)
+all_weights = []
 print "Inferring DNN with layers " + str(nn_shape) + " over " + str(nsteps) + \
       " steps with (batch_size, nepochs) = " + str(be_shape)
 for i in xrange(nframes):
@@ -76,10 +77,9 @@ for i in xrange(nframes):
     input_weight_vals[:, i] = curr_model.get_weights()[0].reshape((nlayer1,))
     mid_weight_vals[:, :, i] = curr_model.get_weights()[2]  # weights of penultimate layer
     output_weight_vals[:, i] = curr_model.get_weights()[3]  # weights of penultimate layer
+    all_weights.append(curr_model.get_weights())
 
 print "Time taken: " + str(time.time()) + " seconds."
 data_out_dict = {'plot_data': plot_data, "pred_plot_vals": pred_plot_vals,
-                 'output_layer_weights': output_weight_vals,
-                 'mid_layer_weights': mid_weight_vals,
-                 'input_layer_weights': mid_weight_vals,}
+                 'all_weights': all_weights}
 pickle.dump(data_out_dict, open(savefile, "wb"))
