@@ -1,0 +1,9 @@
+numpy>=1.9.2
+scipy>=0.15.1
+pandas>=0.17.0
+ipython>=3.2.0
+matplotlib>=1.4.2
+scikit-learn>=0.16.1
+Theano>=0.8
+keras>=0.1
+
