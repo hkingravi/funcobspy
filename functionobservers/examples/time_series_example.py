@@ -69,7 +69,7 @@ for i in xrange(nsteps):
     orig_func_obs[:, :, i] = orig_obs
 
 # dump data
-data_dir = ""
+data_dir = "./data"
 f_prefix = "synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme"
 savefile = os.path.join(data_dir, f_prefix + "_" + scheme + ".pkl")
 data_dict = {'orig_func_vals': orig_func_vals, 'orig_func_plot_vals': orig_func_plot_vals,
