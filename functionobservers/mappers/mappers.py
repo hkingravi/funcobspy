@@ -3,6 +3,7 @@ Classes for mapping data from an input domain to a different feature space.
 Note that mappers must be trained.
 """
 from abc import ABCMeta, abstractmethod
+<<<<<<< HEAD
 from sklearn.utils import check_random_state
 from keras.models import Sequential
 from keras.layers import Dense
@@ -12,6 +13,14 @@ from functionobservers.mappers.kernel import KernelType
 
 
 SUPPORTED_RBFN_KERNELS = ['gaussian', 'sqexp']
+=======
+from keras.models import Sequential
+from keras.layers import Dense
+import numpy as np
+from functionobservers.custom_exceptions import *
+from functionobservers.mappers import KernelType, kernel
+from functionobservers.solvers import solve_tikhinov
+>>>>>>> 34a56d82cbbad7b85363c2023cef306dbb4759c5
 
 
 class Mapper:
@@ -129,6 +138,7 @@ class FrozenDenseDNN(Mapper):
         return np.dot(mapped_data, self.weights)
 
 
+<<<<<<< HEAD
 class RBFNetwork(Mapper):
     """
     An instance of an RBFNetwork.
@@ -198,3 +208,90 @@ class RBFNetwork(Mapper):
 
     def predict(self, data, **kwargs):
         return data
+=======
+class RBFNetwork(object):
+    """
+     This class implements a radial basis function network. This is just a single-layer neural
+     network/kernel machine with a fixed class of basis functions defining a feature map, while
+     the weights generating the function are learned using least squares or gradient descent.
+     We go one step further and allow the parameters of the network (other than basis location)
+     to be learned from the data, if the user chooses.
+    """
+    def __init__(self, centers, k_func, params, noise, optimizer=None):
+        """
+        :param centers:
+        :param k_func:
+        :param params:
+        :param noise:
+        :param optimizer:
+        """
+        if not isinstance(centers, np.ndarray):
+            raise InvalidFeatureMapInput("Centers must be a numpy array.")
+        if not isinstance(k_func, basestring):
+            raise InvalidFeatureMapInput("k_func must be a string.")
+        accepted_kernels = ["gaussian", "polynomial", "sqexp"]
+        if k_func not in accepted_kernels:
+            raise InvalidFeatureMapInput("k_func must be one of the following: " + str(accepted_kernels))
+        if not isinstance(params, np.ndarray):
+            if params.ndim != 1:
+                raise InvalidFeatureMapInput("params must be a 1D numpy array.")
+        if not isinstance(noise, float):
+            raise InvalidFeatureMapInput("noise must be a float.")
+        if noise < 0:
+            raise InvalidFeatureMapInput("noise must be a nonnegative float.")
+        if optimizer is not None and not isinstance(optimizer, dict):
+            raise InvalidFeatureMapInput("optimizer should either be None or a dict.")
+        self.centers = centers
+        self.nbases = centers.shape[1]
+        self.weights = np.random.randn(self.nbases, 1)
+        self.k_func = k_func
+        self.k_params = params
+        self.noise = noise
+        self.optimizer = optimizer
+
+        self.params_final = []
+        self.jitter = 1e-7
+        self.nparams = params.shape[0] + 1  # add noise parameter
+        self.k_type = KernelType(self.k_func, self.k_params)
+
+    def transform(self, data, return_grad=False):
+        """
+
+        :param data:
+        :param return_grad:
+        :return:
+        """
+        self.k_type = KernelType(self.k_func, self.k_params)
+        return kernel(self.centers, data, k_type=self.k_type, return_derivs=return_grad)
+
+    def fit(self, data, obs):
+        """
+        Given a set of data and observations, fit the network with the kernel
+        with the current set of parameters.
+        :param data: D x nsamp data matrix
+        :param obs: 1 x nsamp observation matrix (MUST BE 2D!)
+        :return:
+        """
+        mapped_data = self.transform(data).T
+        weights = solve_tikhinov(mapped_data, obs.T, reg_val=pow(self.noise, 2))
+        return mapped_data, weights
+
+    def predict(self, data, weights_in=None, return_map=False):
+        """
+        :param data:
+        :param weights_in:
+        :param return_map:
+        :return:
+        """
+        kmat = self.transform(data)
+        if weights_in is not None:
+            if weights_in.ndim == 1:
+                weights_in.reshape((weights_in.shape[0], 1))
+            fvals = np.dot(weights_in.T, kmat)
+        else:
+            fvals = np.dot(self.weights.T, kmat)
+        if return_map:
+            return fvals, kmat
+        else:
+            return fvals
+>>>>>>> 34a56d82cbbad7b85363c2023cef306dbb4759c5

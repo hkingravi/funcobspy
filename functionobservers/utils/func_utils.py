@@ -28,6 +28,21 @@ def unpack_state(state):
     return np.reshape(state, (state.shape[0], 1))
 
 
+def infer_dynamics(weight_stream, reg_parm):
+    """
+    Given a stream of weights, infer dynamics operator and covariance matrix.
+    Recall that while feature data is in row major form, we perform all dynamics
+    operations in column major form to preserve convention and my own sanity.
+
+    :param weight_stream: ndim x T matrix of weights, where T is the number of time
+                          steps
+    :param weight_stream: regularization parameter
+    :return: A, an ndim x ndim dynamics matrix, and B, an ndim x ndim covariance matrix.
+    """
+    ndim = weight_stream.shape[0]
+    nsteps = weight_stream.shape[1]
+
+
 def pack_params_nll(d_params, noise, k_name):
     """
     Function to convert dictionary of parameters to k-dimensional vector,
@@ -68,3 +83,5 @@ def unpack_params_nll(params, k_name):
     else:
         raise ValueError("Kernel {} not supported.".format(k_name))
     return d_params, noise
+
+

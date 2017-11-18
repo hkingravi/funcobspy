@@ -31,6 +31,7 @@ data_dir = "./data/"
 out_dir = "./results/"
 f_prefix = "synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme"
 f_scheme = "switching"
+debug_mode = True
 
 # create files
 if not os.path.exists(out_dir):
