@@ -27,3 +27,44 @@ def unpack_state(state):
     """
     return np.reshape(state, (state.shape[0], 1))
 
+
+def pack_params_nll(d_params, noise, k_name):
+    """
+    Function to convert dictionary of parameters to k-dimensional vector,
+    in an order-preserving fashion. Generally, the order doesn't matter, as
+    long as it's fixed.
+
+    :param d_params: dictionary of parameters
+    :param noise: scalar noise parameter
+    :param k_name: name of kernel
+    :return:
+    """
+    nparams = len(d_params.keys()) + 1
+    params = np.zeros((nparams, 1))
+    if k_name == "sqexp":
+        for i in range(0, nparams-2):
+            params[i] = d_params["ell" + str(i+1)][0]  # single dimensional arrays
+        params[nparams-2] = d_params["nu"][0]
+        params[nparams-1] = noise
+    else:
+        raise ValueError("Kernel {} not supported.".format(k_name))
+    return params
+
+
+def unpack_params_nll(params, k_name):
+    """
+
+    :param params:
+    :param k_name: name of kernel
+    :return:
+    """
+    nparams = params.shape[0]
+    d_params = {}
+    if k_name == "sqexp":
+        for i in range(0, nparams-2):
+            d_params["ell" + str(i + 1)] = np.array(params[i])
+        d_params["nu"] = np.array(params[nparams-2])
+        noise = params[nparams-1]
+    else:
+        raise ValueError("Kernel {} not supported.".format(k_name))
+    return d_params, noise

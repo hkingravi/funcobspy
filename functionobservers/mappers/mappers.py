@@ -3,10 +3,15 @@ Classes for mapping data from an input domain to a different feature space.
 Note that mappers must be trained.
 """
 from abc import ABCMeta, abstractmethod
+from sklearn.utils import check_random_state
 from keras.models import Sequential
 from keras.layers import Dense
 import numpy as np
-from functionobservers.solvers import solve_tikhinov
+from functionobservers.optimizers import solve_tikhinov
+from functionobservers.mappers.kernel import KernelType
+
+
+SUPPORTED_RBFN_KERNELS = ['gaussian', 'sqexp']
 
 
 class Mapper:
@@ -122,3 +127,74 @@ class FrozenDenseDNN(Mapper):
     def predict(self, data):
         mapped_data = self.transform(data)
         return np.dot(mapped_data, self.weights)
+
+
+class RBFNetwork(Mapper):
+    """
+    An instance of an RBFNetwork.
+
+    """
+    def __init__(self, centers, kernel_name, d_params, noise, d_opt, random_state=None):
+        """
+
+        :param centers: M x D matrix of M centers
+        :param kernel_name: name of kernel: choose from ['gaussian', 'sqexp']
+        :param d_params: dictionary of parameters, with the keys being the parameter names
+        :param noise:
+        :param d_opt:
+        :param random_state: seed, or random state
+        """
+        if kernel_name not in SUPPORTED_RBFN_KERNELS:
+            raise ValueError("kernel_name {} not supported: "
+                             "choose one from {}".format(kernel_name, SUPPORTED_RBFN_KERNELS))
+
+        self.centers = centers
+        self.kernel_name = kernel_name
+        self.d_params = d_params
+        self.nparams = len(self.d_params.keys()) + 1
+        #self.k_type = fkern.KernelType()
+
+        self.noise = noise
+        self.d_opt = d_opt
+        self.random_state = check_random_state(random_state)
+
+        self.ncent = self.centers.shape[0]
+        self.weights = self.random_state.randn(1, self.ncent)
+
+    def fit(self, data, obs, **kwargs):
+        """
+
+        :param data:
+        :param obs:
+        :param kwargs:
+        :return:
+        """
+        if "seed" in kwargs.keys():
+            self.seed = kwargs["seed"]
+            np.random.seed(kwargs["seed"])
+        if "sort_mat" in kwargs.keys():
+            self.sort_mat = kwargs["sort_mat"]
+        if self.model_type == "RBFNetwork":
+            self.nbases = kwargs["centers"].shape[0]
+        elif self.model_type == "RandomKitchenSinks":
+            self.nbases = kwargs["nbases"]
+        else:
+            raise RuntimeError("Incorrect model_type {}".format(self.model_type))
+
+
+    def fit_current(self, X, y):
+        """
+        Fit weights w.r.t. current parameters.
+
+        :param X: N x D numpy array
+        :param y: N x 1 labels numpy array
+        :return:
+        """
+        #X_t = fkern.map_data_rbfnet(self.centers, k_type, X)
+
+
+    def transform(self, data, **kwargs):
+        return data
+
+    def predict(self, data, **kwargs):
+        return data
