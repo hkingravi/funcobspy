@@ -8,6 +8,7 @@ from functionobservers.mappers.kernel import kernel, KernelType, dist_mat, map_d
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
 
 
+# create data
 x = np.array(([1, 2, 3, 4], [2, 3, 4, 4])).T
 y = np.array(([1, 3, 1], [2, 1, 4])).T
 
@@ -21,11 +22,11 @@ d_params_poly = {"degree": np.array(poly_deg), "bias": np.array(poly_bias)}
 k_poly = KernelType("polynomial", params=d_params_poly)
 
 gauss_band = 0.5
-d_params_gauss = {"sigma": np.array([gauss_band])}
+d_params_gauss = {"sigma": gauss_band}
 k_gauss = KernelType("gaussian", params=d_params_gauss)
 
-d_params_sqexp1 = {"ell1": np.array([0.5]), "nu": np.array([0.7])}
-d_params_sqexp2 = {"ell1": np.array([0.5]), "ell2": np.array([0.7]), "nu": np.array([2])}
+d_params_sqexp1 = {"ell1": 0.5, "nu": 0.7}
+d_params_sqexp2 = {"ell1": 0.5, "ell2": 0.7, "nu": 2.0}
 k_sqexp_1d = KernelType("sqexp", params=d_params_sqexp1)
 k_sqexp_2d = KernelType("sqexp", params=d_params_sqexp2)
 
@@ -59,7 +60,10 @@ K_gauss_rks = np.dot(v1, v2.T)
 print "Data 1 bounds: ({}, {})".format(np.sort(data1, axis=None)[0], np.sort(data1, axis=None)[-1])
 print "Data 2 bounds: ({}, {}).".format(np.sort(data2, axis=None)[0], np.sort(data2, axis=None)[-1])
 
-fig = plt.figure()
+# plotting parameters
+figsize = (12, 12)
+
+fig = plt.figure(figsize=figsize)
 ax2 = fig.add_subplot(311)
 ax3 = fig.add_subplot(312)
 ax4 = fig.add_subplot(313)
@@ -73,30 +77,32 @@ ax3.plot(data1, np.squeeze(grads_sqexp_1d["nu"]), linewidth=3.0, c="r", label="n
 ax3.plot(data1, np.squeeze(grads_sqexp_1d["ell1"]), linewidth=3.0, c="g", label="ell")
 sqexp_title = "Squared exponential kernel derivatives, (ell, nu) = (" + str(d_params_sqexp1["ell1"]) + ", " \
               + str(d_params_sqexp1["nu"]) + ")"
+ax3.legend()
 ax3.title.set_text(sqexp_title)
 
 ax4.plot(data1, np.squeeze(K_poly_1d), linewidth=3.0)
 poly_title = "Polynomial kernel (d, b) =(" + str(poly_deg) + ", " + str(poly_bias) + ")"
 ax4.title.set_text(poly_title)
+fig.suptitle("Plot of 1D kernels")
 
-fig = plt.figure()
-
+fig2 = plt.figure(figsize=figsize)
 Kr = np.dot(v1, v2.T)
 K = kernel(data1=data1, data2=data2, k_type=k_gauss)
-ax2a = fig.add_subplot(311)
+ax2a = fig2.add_subplot(311)
 im1 = ax2a.imshow(K.T)
 plt.colorbar(im1)
 plt.title("Full kernel matrix")
-ax2b = fig.add_subplot(312)
+ax2b = fig2.add_subplot(312)
 im2 = ax2b.imshow(Kr.T)
 plt.title("RKS kernel matrix")
 plt.colorbar(im2)
-ax2c = fig.add_subplot(313)
+ax2c = fig2.add_subplot(313)
 im3 = ax2c.imshow(K.T-Kr.T)
 plt.title("Absolute Value Difference")
 plt.colorbar(im3)
 print "Percentage error in Gram matrix between RKS and " \
       "Gaussian kernel: {:.2f} percent.".format(100.0*np.linalg.norm(K-Kr)/np.linalg.norm(K))
+fig2.suptitle("Plot of random kitchen sinks approximation")
 
 # check parameter packing
 noise = 0.2

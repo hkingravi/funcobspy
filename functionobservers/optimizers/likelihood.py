@@ -4,12 +4,13 @@ Module containing likelihoods for optimization purposes.
 import numpy as np
 import functionobservers.mappers.kernel as fkernel
 from functionobservers.optimizers.linalg import solve_chol
+from functionobservers.utils import pack_params_nll, unpack_params_nll
 
 SUPPORTED_MAPPERS = ["RBFNetwork", "RandomKitchenSinks"]
 JITTER = 1e-7
 
 
-def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers):
+def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbose=False):
     """
 
     :param param_vec:
@@ -18,6 +19,7 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers):
     :param k_name:
     :param mapper_type: string, choose from "RBFNetwork" and "RandomKitchenSinks"
     :param centers:  M x D matrix of basis centers
+    :param verbose: print more information
     :return:
     """
     if mapper_type not in SUPPORTED_MAPPERS:
@@ -26,20 +28,25 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers):
 
     # compute kernel map, and then kernel matrix
     nsamp = X.shape[0]
-    dim = param_vec.shape[1]
+    dim = param_vec.shape[0]
+    param_vec = param_vec.reshape((dim,))  # ensure vector
+    if verbose:
+        print "param_vec: {}".format(param_vec)
     k_params = np.exp(param_vec[0:dim-1])
-    noise = np.exp(2.0*param_vec[dim])  # do this to avoid negative parameter scaling issues
-    k_type = fkernel.KernelType(name=k_name, params=k_params)
+    noise = np.exp(2.0*param_vec[-1])  # take exp to avoid negative parameter scaling issues
+    d_params, _ = unpack_params_nll(np.hstack([k_params, noise]), k_name)  # 'unpack' vector
+    k_type = fkernel.KernelType(name=k_name, params=d_params)
 
     if mapper_type == "RBFNetwork":
-        X_t = fkernel.map_data_rbfnet(centers, k_type, X)
+        X_t, grads = fkernel.map_data_rbfnet(centers, k_type, X, return_grads=True)
     elif mapper_type == "RandomKitchenSinks":
-        X_t = fkernel.map_data_rks(centers, k_type, X)
+        X_t, grads = fkernel.map_data_rks(centers, k_type, X)
+    else:
+        raise ValueError("Unexpected mapper_type {}: halting execution".format(mapper_type))
 
     # solve in the primal: compute the capacitance matrix
     Kp = np.dot(X_t.T, X_t)
     ncent = Kp.shape[0]
-    print ncent
 
     # compute L matrix, making sure small noise parameters don't lead to numerical instability
     if noise < 1e-6:
@@ -54,6 +61,17 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers):
     alpha = np.dot(C_inv, y)  # compute cofficient vector
     logdet = np.sum(np.log(np.diag(L)).ravel())  # compute log determinant
 
-    print alpha.shape
+    nll = np.dot(y.T, alpha)/2 + logdet + nsamp*np.log(2*np.pi*sl)/2  # negative log-likelihood
 
-    #nll = obs*alpha/2 + logdet + nsamp*np.log(2*np.pi*sl)/2  # negative log-likelihood
+    # compute gradients
+    grads_out = {}
+    Q = C_inv - np.dot(alpha, alpha.T)
+    for v in grads.keys():
+        band_mat = np.dot(X_t, grads[v].T) + np.dot(grads[v], X_t.T)
+        grads_out[v] = np.sum(np.sum(Q*band_mat))/2
+    noise_mat = 2*noise*np.eye(nsamp)
+    noise_out = np.sum(np.sum(Q*noise_mat))/2
+    if verbose:
+        print "Negative log-likelihood: {}".format(nll)
+        print "Grads out: ({}, {})".format(grads_out, noise_out)
+    return nll[0][0], pack_params_nll(grads_out, noise_out, k_name)

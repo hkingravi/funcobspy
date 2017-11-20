@@ -32,16 +32,16 @@ class KernelType(object):
             raise ValueError("k_params must be a dictionary.")
 
         if name == "polynomial":
-            if not set(["degree", "bias"]).issubset(set(params.keys())):
+            if not {"degree", "bias"}.issubset(set(params.keys())):
                 raise ValueError("Incorrect number of parameters: polynomial kernel needs degree and bias")
         elif name == "gaussian":
-            if not set(["sigma"]).issubset(set(params.keys())):
+            if not {"sigma"}.issubset(set(params.keys())):
                 raise ValueError("Incorrect number of parameters: Gaussian kernel needs bandwidth")
         elif not name == "laplacian":
-            if set(["sigma"]).issubset(set(params.keys())):
+            if {"sigma"}.issubset(set(params.keys())):
                 raise ValueError("Incorrect number of parameters: Laplacian kernel needs bandwidth")
         elif not name == "sigmoid":
-            if set(["sigma"]).issubset(set(params.keys())):
+            if {"sigma"}.issubset(set(params.keys())):
                 raise ValueError("Incorrect number of parameters: sigmoid kernel needs scaling")
         elif name == "sqexp":
             nparams = len(params.keys())
@@ -58,7 +58,7 @@ class KernelType(object):
         """
         This function prints out the KernelType object.
         """
-        return self.name + " kernel with parameters " + np.array_str(self.params)
+        return "{} kernel with parameters {}".format(self.name, self.params)
 
 
 def kernel(data1, data2, k_type, return_grads=False):
@@ -89,7 +89,7 @@ def kernel(data1, data2, k_type, return_grads=False):
                     nells += 1
             if nells != data1.shape[1]:
                 raise ValueError("Incorrect number of parameters: squared exponential "
-                                         "kernel must have D+1 parameters, where D is the input dimension")
+                                 "kernel must have D+1 parameters, where D is the input dimension")
         k_mat = kernel_base(data1.T, data2.T, k_type, return_grads)
     else:
         raise ValueError("Invalid kernel type")
@@ -137,7 +137,7 @@ def kernel_base(data1, data2, k_type, return_grads):
             k_mat, grads = sqexp_kernel(data1=data1, data2=data2, params=k_type.params,
                                         return_grads=return_grads)
         else:
-            k_mat = sqexp_kernel(data1=data1, data2=data2, params=k_type.params, return_grads=return_grads)
+            k_mat = sqexp_kernel(data1=data1, data2=data2, params=k_type.params, return_grads=False)
     else:
         raise ValueError("Invalid kernel type")
 
@@ -182,11 +182,14 @@ def sqexp_kernel(data1, data2, params, return_grads=False):
     :return:
     """
     ndim = data1.shape[0]
-    ells = ["ell" + str(i + 1) for i in xrange(ndim)]
-    ell = np.array([params[v][0] for v in ells])
+    ells = ["ell" + str(i + 1) for i in range(0, ndim)]
+    ell = np.array([params[v] for v in ells])
     sf2 = pow(float(params["nu"]), 2)
-    k_mat = dist_mat(data1=np.dot(np.diag(1./ell), data1),
-                     data2=np.dot(np.diag(1./ell), data2))
+    if ndim == 1:
+        e_mat = np.diag(1./ell).reshape((1, 1))
+    else:
+        e_mat = np.diag(1./ell)
+    k_mat = dist_mat(data1=np.dot(e_mat, data1), data2=np.dot(e_mat, data2))
     k_mat = sf2*np.exp(-0.5*k_mat)
 
     if return_grads:
@@ -201,7 +204,7 @@ def sqexp_kernel(data1, data2, params, return_grads=False):
         return k_mat
 
 
-def map_data_rbfnet(centers, k_type, data):
+def map_data_rbfnet(centers, k_type, data, return_grads=False):
     """
     Given a fixed set of centers and a fixed kernel, map given data to the RBF network's
     feature space.
@@ -209,12 +212,13 @@ def map_data_rbfnet(centers, k_type, data):
     :param centers: M x D numpy array of centers
     :param k_type:  `KernelType` object
     :param data: N x D numpy array of data
+    :param return_grads: boolean indicating whether gradient should be returned
     :return:
     """
-    return kernel(data1=centers, data2=data, k_type=k_type)
+    return kernel(data1=data, data2=centers, k_type=k_type, return_grads=return_grads)
 
 
-def map_data_rks(centers, k_type, data):
+def map_data_rks(centers, k_type, data, return_grads=False):
     """
     Given a fixed set of centers and a fixed kernel, map given data to the RBF network's
     feature space.
@@ -222,12 +226,18 @@ def map_data_rks(centers, k_type, data):
     :param centers: M x D numpy array of centers
     :param k_type:  `KernelType` object
     :param data: N x D numpy array of data
+    :param return_grads: boolean indicating whether gradient should be returned
     :return:
     """
     if k_type.name != "gaussian":
         raise ValueError("RandomKitchenSinks not defined for non-Gaussian kernels. Halting execution.")
-    centers /= float(np.sqrt(1.0)*k_type.params["sigma"][0])  # scale centers
+    centers /= float(np.sqrt(1.0)*k_type.params["sigma"])  # scale centers
     data_trans = np.dot(data, centers.T)
-    return np.hstack((np.sin(data_trans), np.cos(data_trans)))/np.sqrt(float(centers.shape[0]))
+    m_data = np.hstack((np.sin(data_trans), np.cos(data_trans)))/np.sqrt(float(centers.shape[0]))
+    if return_grads:
+        grd = np.hstack((-np.cos(data_trans), np.sin(data_trans)))/np.sqrt(float(centers.shape[0]))
+        return m_data, {"sigma": grd}
+    else:
+        return m_data
 
 

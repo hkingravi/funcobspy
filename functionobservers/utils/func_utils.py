@@ -54,12 +54,13 @@ def pack_params_nll(d_params, noise, k_name):
     :param k_name: name of kernel
     :return:
     """
-    nparams = len(d_params.keys()) + 1
-    params = np.zeros((nparams, 1))
+    d_params_copy = d_params.copy()
+    nparams = len(d_params_copy.keys()) + 1
+    params = np.zeros((nparams,))
     if k_name == "sqexp":
         for i in range(0, nparams-2):
-            params[i] = d_params["ell" + str(i+1)][0]  # single dimensional arrays
-        params[nparams-2] = d_params["nu"][0]
+            params[i] = d_params_copy["ell" + str(i+1)]
+        params[nparams-2] = d_params_copy["nu"]
         params[nparams-1] = noise
     else:
         raise ValueError("Kernel {} not supported.".format(k_name))
@@ -77,8 +78,8 @@ def unpack_params_nll(params, k_name):
     d_params = {}
     if k_name == "sqexp":
         for i in range(0, nparams-2):
-            d_params["ell" + str(i + 1)] = np.array(params[i])
-        d_params["nu"] = np.array(params[nparams-2])
+            d_params["ell" + str(i + 1)] = params[i]
+        d_params["nu"] = params[nparams-2]
         noise = params[nparams-1]
     else:
         raise ValueError("Kernel {} not supported.".format(k_name))
