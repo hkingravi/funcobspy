@@ -1,20 +1,13 @@
 """
 Examples of kernel functions.
 """
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 from functionobservers.mappers.kernel import kernel, KernelType, dist_mat, map_data_rks
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
-
-import logging
-logger = logging.getLogger(__name__)
-out_hdlr = logging.StreamHandler(sys.stdout)
-out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-out_hdlr.setLevel(logging.INFO)
-logger.addHandler(out_hdlr)
-logger.setLevel(logging.INFO)
+from functionobservers.log_utils import configure_logger
+logger = configure_logger(level="INFO", name="funcobspy")
 
 
 # create data

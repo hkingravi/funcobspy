@@ -1,17 +1,10 @@
 """
 Classes and functions for computing kernel functions.
 """
-import sys
 import numpy as np
 
-# FIX!!
-import logging
-logger = logging.getLogger(__name__)
-out_hdlr = logging.StreamHandler(sys.stdout)
-out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-out_hdlr.setLevel(logging.INFO)
-logger.addHandler(out_hdlr)
-logger.setLevel(logging.INFO)
+from functionobservers.log_utils import configure_logger
+logger = configure_logger(level="INFO", name="funcobspy")
 
 
 class KernelType(object):

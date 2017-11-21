@@ -1,22 +1,15 @@
 """
 Module containing likelihoods for optimization purposes.
 """
-import sys
 import numpy as np
 import functionobservers.mappers.kernel as fkernel
 from functionobservers.optimizers.linalg import solve_chol
 from functionobservers.utils import pack_params_nll, unpack_params_nll
+from functionobservers.log_utils import configure_logger
+logger = configure_logger(level="INFO", name="funcobspy")
 
 SUPPORTED_MAPPERS = ["RBFNetwork", "RandomKitchenSinks"]
 JITTER = 1e-7
-
-import logging
-logger = logging.getLogger(__name__)
-out_hdlr = logging.StreamHandler(sys.stdout)
-out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-out_hdlr.setLevel(logging.INFO)
-logger.addHandler(out_hdlr)
-logger.setLevel(logging.INFO)
 
 
 def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbose=False):

@@ -14,15 +14,8 @@ from functionobservers.optimizers import solve_tikhinov
 from functionobservers.mappers.kernel import KernelType, kernel
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
 from functionobservers.optimizers.likelihood import negative_log_likelihood
-
-# FIX!!
-import logging
-logger = logging.getLogger(__name__)
-out_hdlr = logging.StreamHandler(sys.stdout)
-out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-out_hdlr.setLevel(logging.INFO)
-logger.addHandler(out_hdlr)
-logger.setLevel(logging.INFO)
+from functionobservers.log_utils import configure_logger
+logger = configure_logger(level="INFO", name="funcobspy")
 
 SUPPORTED_RBFN_KERNELS = ['gaussian', 'sqexp']
 
