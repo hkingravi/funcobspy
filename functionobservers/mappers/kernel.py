@@ -1,8 +1,17 @@
 """
 Classes and functions for computing kernel functions.
 """
-
+import sys
 import numpy as np
+
+# FIX!!
+import logging
+logger = logging.getLogger(__name__)
+out_hdlr = logging.StreamHandler(sys.stdout)
+out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+out_hdlr.setLevel(logging.INFO)
+logger.addHandler(out_hdlr)
+logger.setLevel(logging.INFO)
 
 
 class KernelType(object):
@@ -27,21 +36,27 @@ class KernelType(object):
         """
         accepted_types = ["gaussian", "sqexp", "laplacian", "polynomial", "sigmoid"]
         if name not in accepted_types:
+            logger.error("Incorrect type of kernel selected: see documentation.")
             raise ValueError("Incorrect type of kernel selected: see documentation.")
         if not isinstance(params, dict):
+            logger.error("k_params must be a dictionary.")
             raise ValueError("k_params must be a dictionary.")
 
         if name == "polynomial":
             if not {"degree", "bias"}.issubset(set(params.keys())):
+                logger.error("Incorrect number of parameters: polynomial kernel needs degree and bias")
                 raise ValueError("Incorrect number of parameters: polynomial kernel needs degree and bias")
         elif name == "gaussian":
             if not {"sigma"}.issubset(set(params.keys())):
+                logger.error("Incorrect number of parameters: Gaussian kernel needs bandwidth")
                 raise ValueError("Incorrect number of parameters: Gaussian kernel needs bandwidth")
         elif not name == "laplacian":
             if {"sigma"}.issubset(set(params.keys())):
+                logger.error("Incorrect number of parameters: Laplacian kernel needs bandwidth")
                 raise ValueError("Incorrect number of parameters: Laplacian kernel needs bandwidth")
         elif not name == "sigmoid":
             if {"sigma"}.issubset(set(params.keys())):
+                logger.error("Incorrect number of parameters: sigmoid kernel needs scaling")
                 raise ValueError("Incorrect number of parameters: sigmoid kernel needs scaling")
         elif name == "sqexp":
             nparams = len(params.keys())
@@ -49,6 +64,7 @@ class KernelType(object):
             for i in xrange(nparams-1):
                 key_list.append("ell" + str(i+1))
             if not set(key_list).issubset(set(params.keys())):
+                logger.error("Incorrect number of parameters: see sqexp description in documentation.")
                 raise ValueError("Incorrect number of parameters: see sqexp description in documentation.")
 
         self.name = name
@@ -88,11 +104,14 @@ def kernel(data1, data2, k_type, return_grads=False):
                 if "ell" in v:
                     nells += 1
             if nells != data1.shape[1]:
-                raise ValueError("Incorrect number of parameters: squared exponential "
-                                 "kernel must have D+1 parameters, where D is the input dimension")
+                out_m = "Incorrect number of parameters: squared exponential " \
+                        "kernel must have D+1 parameters, where D is the input dimension."
+                logger.error(out_m)
+                raise ValueError(out_m)
         k_mat = kernel_base(data1.T, data2.T, k_type, return_grads)
     else:
-        raise ValueError("Invalid kernel type")
+        logger.error("Invalid kernel type.")
+        raise ValueError("Invalid kernel type.")
     return k_mat
 
 
@@ -115,6 +134,7 @@ def kernel_base(data1, data2, k_type, return_grads):
 
         if return_grads:
             if k_type.name == "laplacian":
+                logger.error("Laplacian kernel currently doesn't have derivatives implemented.")
                 raise ValueError("Laplacian kernel currently doesn't have derivatives implemented.")
             dmat = dist_mat(data1=data1, data2=data2)
             k_mat = np.exp(s_val * dmat)
@@ -125,6 +145,7 @@ def kernel_base(data1, data2, k_type, return_grads):
             k_mat = np.exp(s_val*k_mat)
     elif k_type.name == "polynomial":
         if return_grads:
+            logger.error("Polynomial kernel currently doesn't have derivatives implemented.")
             raise ValueError("Polynomial kernel currently doesn't have derivatives implemented.")
         degree = k_type.params["degree"]
         bias = k_type.params["bias"]
@@ -139,7 +160,8 @@ def kernel_base(data1, data2, k_type, return_grads):
         else:
             k_mat = sqexp_kernel(data1=data1, data2=data2, params=k_type.params, return_grads=False)
     else:
-        raise ValueError("Invalid kernel type")
+        logger.error("Invalid kernel type.")
+        raise ValueError("Invalid kernel type.")
 
     if return_grads:
         return k_mat, grads
@@ -230,7 +252,8 @@ def map_data_rks(centers, k_type, data, return_grads=False):
     :return:
     """
     if k_type.name != "gaussian":
-        raise ValueError("RandomKitchenSinks not defined for non-Gaussian kernels. Halting execution.")
+        logger.error("RandomKitchenSinks not implemented for non-Gaussian kernels. Halting execution.")
+        raise ValueError("RandomKitchenSinks not implemented for non-Gaussian kernels. Halting execution.")
     centers /= float(np.sqrt(1.0)*k_type.params["sigma"])  # scale centers
     data_trans = np.dot(data, centers.T)
     m_data = np.hstack((np.sin(data_trans), np.cos(data_trans)))/np.sqrt(float(centers.shape[0]))

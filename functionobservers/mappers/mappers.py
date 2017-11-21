@@ -2,14 +2,27 @@
 Classes for mapping data from an input domain to a different feature space.
 Note that mappers must be trained.
 """
+import sys
 from abc import ABCMeta, abstractmethod
 from sklearn.utils import check_random_state
 from keras.models import Sequential
 from keras.layers import Dense
 import numpy as np
-from functionobservers.optimizers import solve_tikhinov
-from functionobservers.mappers.kernel import KernelType
+from scipy.optimize import minimize
 
+from functionobservers.optimizers import solve_tikhinov
+from functionobservers.mappers.kernel import KernelType, kernel
+from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
+from functionobservers.optimizers.likelihood import negative_log_likelihood
+
+# FIX!!
+import logging
+logger = logging.getLogger(__name__)
+out_hdlr = logging.StreamHandler(sys.stdout)
+out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+out_hdlr.setLevel(logging.INFO)
+logger.addHandler(out_hdlr)
+logger.setLevel(logging.INFO)
 
 SUPPORTED_RBFN_KERNELS = ['gaussian', 'sqexp']
 
@@ -134,66 +147,102 @@ class RBFNetwork(Mapper):
     An instance of an RBFNetwork.
 
     """
-    def __init__(self, centers, kernel_name, d_params, noise, d_opt, random_state=None):
+    def __init__(self, centers, kernel_name, d_params, noise, optimizer, d_opt=None, random_state=None,
+                 verbose=False):
         """
 
         :param centers: M x D matrix of M centers
         :param kernel_name: name of kernel: choose from ['gaussian', 'sqexp']
         :param d_params: dictionary of parameters, with the keys being the parameter names
         :param noise:
+        :param optimizer: string, method in minimize to use, e.g. "L-BFGS-B"
         :param d_opt:
         :param random_state: seed, or random state
+        :param verbose: whether to print information to the console or not
         """
         if kernel_name not in SUPPORTED_RBFN_KERNELS:
-            raise ValueError("kernel_name {} not supported: "
-                             "choose one from {}".format(kernel_name, SUPPORTED_RBFN_KERNELS))
+            out_m = "kernel_name {} not supported: " \
+                    "choose one from {}".format(kernel_name, SUPPORTED_RBFN_KERNELS)
+            logger.error(out_m)
+            raise ValueError(out_m)
 
         self.centers = centers
         self.kernel_name = kernel_name
         self.d_params = d_params
         self.nparams = len(self.d_params.keys()) + 1
-        #self.k_type = fkern.KernelType()
-
+        self.k_type = KernelType(self.kernel_name, params=self.d_params)
         self.noise = noise
+        self.optimizer = optimizer
         self.d_opt = d_opt
         self.random_state = check_random_state(random_state)
 
         self.ncent = self.centers.shape[0]
         self.weights = self.random_state.randn(1, self.ncent)
+        self.params_final = None
+        self.verbose = verbose
 
-    def fit(self, data, obs, **kwargs):
+    def fit(self, X, y, **kwargs):
         """
+        Fit method for RBFNetwork: parameters are fitted using the negative log-likelihood.
 
-        :param data:
-        :param obs:
+        :param X:
+        :param y:
         :param kwargs:
         :return:
         """
-        if "seed" in kwargs.keys():
-            self.seed = kwargs["seed"]
-            np.random.seed(kwargs["seed"])
-        if "sort_mat" in kwargs.keys():
-            self.sort_mat = kwargs["sort_mat"]
-        if self.model_type == "RBFNetwork":
-            self.nbases = kwargs["centers"].shape[0]
-        elif self.model_type == "RandomKitchenSinks":
-            self.nbases = kwargs["nbases"]
-        else:
-            raise RuntimeError("Incorrect model_type {}".format(self.model_type))
+        if self.verbose:
+            logger.info("Initial (params, noise): ({}, {})".format(self.d_params, self.noise))
+
+        arg_tup = tuple([X, y, self.kernel_name, "RBFNetwork", self.centers])  # tuple for minimize
+        params_i = np.log(pack_params_nll(self.d_params, self.noise, self.kernel_name))  # log for numerical issues
+        optobj = minimize(fun=negative_log_likelihood, x0=params_i, args=arg_tup, method=self.optimizer,
+                          jac=True, options=self.d_opt)  # run optimizer
+        params_o = np.exp(optobj.x)  # convert to original form, and unpack
+        d_params_o, noise_o = unpack_params_nll(params_o, self.kernel_name)
+
+        # update params, and fit final weights
+        self.d_params = d_params_o
+        self.noise = noise_o
+        self.k_type = KernelType(self.kernel_name, params=self.d_params)
+
+        if self.verbose:
+            logger.info("Final (params, noise): ({}, {}). Fitting weights...".format(self.d_params, self.noise))
+        weights, X_t = self.fit_current(X, y)
+        self.weights = weights
+        return weights, X_t
 
     def fit_current(self, X, y):
         """
-        Fit weights w.r.t. current parameters.
+        Fit weights of model w.r.t. current parameters.
 
         :param X: N x D numpy array
         :param y: N x 1 labels numpy array
         :return:
         """
-        #X_t = fkern.map_data_rbfnet(self.centers, k_type, X)
+        X_t = self.transform(X)  # project data to kernel space, and solve for weights
+        weights = solve_tikhinov(X_t.T, y, pow(self.noise, 2)).T
+        return weights, X_t
 
-    def transform(self, data, **kwargs):
-        return data
+    def transform(self, X, **kwargs):
+        """
+        Project data to the kernel space: dependent only on the current kernel
+        and the centers.
 
-    def predict(self, data, **kwargs):
-        return data
+        :param X: N x D numpy array
+        :param kwargs: optional arguments that are ignored for this class.
+        :return:
+        """
+        return kernel(data1=self.centers, data2=X, k_type=self.k_type)
+
+    def predict(self, X, **kwargs):
+        """
+        Given data, make regression prediction using current weights,
+        kernel, and centers.
+
+        :param X: N x D numpy array
+        :param kwargs: optional arguments that are ignored for this class.
+        :return:
+        """
+        return np.dot(self.weights, self.transform(X)).T
+
 

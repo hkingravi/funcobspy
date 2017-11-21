@@ -1,11 +1,20 @@
 """
-
+Examples of kernel functions.
 """
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 from functionobservers.mappers.kernel import kernel, KernelType, dist_mat, map_data_rks
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
+
+import logging
+logger = logging.getLogger(__name__)
+out_hdlr = logging.StreamHandler(sys.stdout)
+out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+out_hdlr.setLevel(logging.INFO)
+logger.addHandler(out_hdlr)
+logger.setLevel(logging.INFO)
 
 
 # create data
@@ -35,15 +44,15 @@ K_gauss_2d = kernel(x, y, k_gauss)
 try:
     K_poly_1d, grads_poly_1d = kernel(data1, data2, k_poly, return_grads=True)
 except ValueError as e:
-    print "Caught exception: " + str(e)
+    logger.info("Caught exception: {}".format(e))
 K_poly_1d = kernel(data1, data2, k_poly)
 K_poly_2d = kernel(x, y, k_poly)
 K_sqexp_1d, grads_sqexp_1d = kernel(data1, data2, k_sqexp_1d, return_grads=True)
 K_sqexp_2d, grads_sqexp_2d = kernel(x, y, k_sqexp_2d, return_grads=True)
 
-print "Data shapes: ", data1.shape, data2.shape
-print "x, y shapes: ", x.shape, y.shape
-print "Gaussian, 2D shape:", K_gauss_2d.shape
+logger.info("Data shapes: {}, {}".format(data1.shape, data2.shape))
+logger.info("x, y shapes: {}, {}".format(x.shape, y.shape))
+logger.info("Gaussian, 2D shape: {}".format(K_gauss_2d.shape))
 
 # now do everything for RandomKitchenSinks
 nsamp2 = 50
@@ -57,8 +66,8 @@ rks_basis = random_state.randn(nbases, data1.shape[1])
 v1 = map_data_rks(centers=rks_basis, k_type=k_gauss, data=data1)
 v2 = map_data_rks(centers=rks_basis, k_type=k_gauss, data=data2)
 K_gauss_rks = np.dot(v1, v2.T)
-print "Data 1 bounds: ({}, {})".format(np.sort(data1, axis=None)[0], np.sort(data1, axis=None)[-1])
-print "Data 2 bounds: ({}, {}).".format(np.sort(data2, axis=None)[0], np.sort(data2, axis=None)[-1])
+logger.info("Data 1 bounds: ({}, {})".format(np.sort(data1, axis=None)[0], np.sort(data1, axis=None)[-1]))
+logger.info("Data 2 bounds: ({}, {}).".format(np.sort(data2, axis=None)[0], np.sort(data2, axis=None)[-1]))
 
 # plotting parameters
 figsize = (12, 12)
@@ -100,8 +109,10 @@ ax2c = fig2.add_subplot(313)
 im3 = ax2c.imshow(K.T-Kr.T)
 plt.title("Absolute Value Difference")
 plt.colorbar(im3)
-print "Percentage error in Gram matrix between RKS and " \
-      "Gaussian kernel: {:.2f} percent.".format(100.0*np.linalg.norm(K-Kr)/np.linalg.norm(K))
+logger.info(
+    "Percentage error in Gram matrix between RKS and " \
+    "Gaussian kernel: {:.2f} percent.".format(100.0*np.linalg.norm(K-Kr)/np.linalg.norm(K))
+)
 fig2.suptitle("Plot of random kitchen sinks approximation")
 
 # check parameter packing
@@ -109,11 +120,18 @@ noise = 0.2
 try:
     params_sqexp2 = pack_params_nll(d_params_sqexp2, noise, k_name="etc")
 except ValueError as e:
-    print "Caught exception: " + str(e)
-print "Original (sqexp, noise) parameters:\n ({}, {})".format(d_params_sqexp2, noise)
+    logger.info(
+        "Caught exception: {}".format(e)
+    )
+logger.info(
+    "Original (sqexp, noise) parameters:\n ({}, {})".format(d_params_sqexp2, noise)
+)
 params_sqexp2 = pack_params_nll(d_params_sqexp2, noise, k_name="sqexp")
-print "Packed sqexp parameters:\n {}".format(params_sqexp2)
+logger.info(
+    "Packed sqexp parameters:\n {}".format(params_sqexp2)
+)
 d_params_sqexp2b, noiseb = unpack_params_nll(params_sqexp2, k_name="sqexp")
-print "Unpacked (sqexp, noise) parameters:\n ({}, {})".format(d_params_sqexp2, noise)
-
+logger.info(
+    "Unpacked (sqexp, noise) parameters:\n ({}, {})".format(d_params_sqexp2, noise)
+)
 plt.show()

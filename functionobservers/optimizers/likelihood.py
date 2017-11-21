@@ -1,6 +1,7 @@
 """
 Module containing likelihoods for optimization purposes.
 """
+import sys
 import numpy as np
 import functionobservers.mappers.kernel as fkernel
 from functionobservers.optimizers.linalg import solve_chol
@@ -8,6 +9,14 @@ from functionobservers.utils import pack_params_nll, unpack_params_nll
 
 SUPPORTED_MAPPERS = ["RBFNetwork", "RandomKitchenSinks"]
 JITTER = 1e-7
+
+import logging
+logger = logging.getLogger(__name__)
+out_hdlr = logging.StreamHandler(sys.stdout)
+out_hdlr.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+out_hdlr.setLevel(logging.INFO)
+logger.addHandler(out_hdlr)
+logger.setLevel(logging.INFO)
 
 
 def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbose=False):
@@ -23,15 +32,20 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbo
     :return:
     """
     if mapper_type not in SUPPORTED_MAPPERS:
-        raise ValueError("Mapper type {} not supported: "
-                         "supported mappers are {}.".format(mapper_type, SUPPORTED_MAPPERS))
+        out_m = "Mapper type {} not supported: supported mappers are {}.".format(mapper_type, SUPPORTED_MAPPERS)
+        logger.error(
+            out_m
+        )
+        raise ValueError(out_m)
 
     # compute kernel map, and then kernel matrix
     nsamp = X.shape[0]
     dim = param_vec.shape[0]
     param_vec = param_vec.reshape((dim,))  # ensure vector
     if verbose:
-        print "param_vec: {}".format(param_vec)
+        logger.info(
+            "param_vec: {}".format(param_vec)
+        )
     k_params = np.exp(param_vec[0:dim-1])
     noise = np.exp(2.0*param_vec[-1])  # take exp to avoid negative parameter scaling issues
     d_params, _ = unpack_params_nll(np.hstack([k_params, noise]), k_name)  # 'unpack' vector
@@ -42,6 +56,9 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbo
     elif mapper_type == "RandomKitchenSinks":
         X_t, grads = fkernel.map_data_rks(centers, k_type, X)
     else:
+        logger.error(
+            "Unexpected mapper_type {}: halting execution".format(mapper_type)
+        )
         raise ValueError("Unexpected mapper_type {}: halting execution".format(mapper_type))
 
     # solve in the primal: compute the capacitance matrix
@@ -72,6 +89,7 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbo
     noise_mat = 2*noise*np.eye(nsamp)
     noise_out = np.sum(np.sum(Q*noise_mat))/2
     if verbose:
-        print "Negative log-likelihood: {}".format(nll)
-        print "Grads out: ({}, {})".format(grads_out, noise_out)
+        logger.info(
+            "Negative log-likelihood: {}\nGrads out: ({}, {})".format(nll, grads_out, noise_out)
+        )
     return nll[0][0], pack_params_nll(grads_out, noise_out, k_name)
