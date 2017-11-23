@@ -25,7 +25,7 @@ def configure_logger(level='INFO', name=None):
         level = 'INFO'
 
     logging.basicConfig(level=level_map[level], format=LOG_FORMAT)  # perform basic configuration
-    if isinstance(name, basestring):
+    if isinstance(name, str):
         logger_out = logging.getLogger(name)
     else:
         logger_out = logging.getLogger(__name__)

@@ -19,7 +19,6 @@ def time_varying_uncertainty(weights_star, t, scheme):
     :return:
     """
     if scheme == "smooth1":
-        print t
         weights_star[0] = 0.999*weights_star[0] + 0.5*np.sin(t)*weights_star[1] + 0.5*np.sin(t)
         weights_star[1] = 0.3*np.cos(1.1*t) + 0.1*weights_star[1]
         vals = np.min(np.array([0.1*np.cos(1.1*t) + weights_star[2], 2]))
@@ -28,7 +27,6 @@ def time_varying_uncertainty(weights_star, t, scheme):
         weights_star[3] = np.sin(weights_star[4]) + weights_star[3]*vals
         vals = np.max(np.array([np.min(np.array([0.1*np.cos(1.1*t)*weights_star[0] + weights_star[4], 2])), -2]))
         weights_star[4] = 0.1*np.cos(2.2*t) + vals
-        print weights_star
     elif scheme == "smooth2":
         weights_star[0] += 0.1 * np.sin(t)
         weights_star[1] = np.cos(1.1 * t) + weights_star[1]

@@ -10,7 +10,7 @@ from keras.layers import Dense
 import numpy as np
 from scipy.optimize import minimize
 
-from functionobservers.optimizers import solve_tikhinov
+from functionobservers.optimizers.linalg_o import solve_tikhinov
 from functionobservers.mappers.kernel import KernelType, kernel
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
 from functionobservers.optimizers.likelihood import negative_log_likelihood
@@ -137,7 +137,7 @@ class FrozenDenseDNN(Mapper):
 
 class RBFNetwork(Mapper):
     """
-    An instance of an RBFNetwork.
+    An instance of a linear RBF neural network.
 
     """
     def __init__(self, centers, kernel_name, d_params, noise, optimizer, d_opt=None, random_state=None,
@@ -147,7 +147,7 @@ class RBFNetwork(Mapper):
         :param centers: M x D matrix of M centers
         :param kernel_name: name of kernel: choose from ['gaussian', 'sqexp']
         :param d_params: dictionary of parameters, with the keys being the parameter names
-        :param noise:
+        :param noise: noise
         :param optimizer: string, method in minimize to use, e.g. "L-BFGS-B"
         :param d_opt:
         :param random_state: seed, or random state
@@ -167,27 +167,28 @@ class RBFNetwork(Mapper):
         self.noise = noise
         self.optimizer = optimizer
         self.d_opt = d_opt
-        self.random_state = check_random_state(random_state)
+        self.random_state = check_random_state(random_state)  # make proper RandomState instance
 
+        self.dim = self.centers.shape[1]
         self.ncent = self.centers.shape[0]
-        self.weights = self.random_state.randn(1, self.ncent)
-        self.params_final = None
+        self.weights = self.random_state.randn(1, self.ncent)  # randomly initialize weights
         self.verbose = verbose
 
-    def fit(self, X, y, **kwargs):
+    def fit(self, X, y, reinit_params=True):
         """
         Fit method for RBFNetwork: parameters are fitted using the negative log-likelihood.
 
-        :param X:
-        :param y:
-        :param kwargs:
+        :param X: (nsamp, dim) numpy array of data
+        :param y: ()
+        :param reinit_params:
         :return:
         """
+        d_params_i, noise_i = self.init_params()  # reinitialize parameters to break symmetry
         if self.verbose:
             logger.info("Initial (params, noise): ({}, {})".format(self.d_params, self.noise))
-
-        arg_tup = tuple([X, y, self.kernel_name, "RBFNetwork", self.centers])  # tuple for minimize
-        params_i = np.log(pack_params_nll(self.d_params, self.noise, self.kernel_name))  # log for numerical issues
+            logger.info("Re-initialized (params, noise): ({}, {})".format(d_params_i, noise_i))
+        arg_tup = tuple([X, y, self.kernel_name, "RBFNetwork", self.centers, self.verbose])  # tuple for minimize
+        params_i = np.log(pack_params_nll(d_params_i, noise_i, self.kernel_name))  # log to avoid numerical issues
         optobj = minimize(fun=negative_log_likelihood, x0=params_i, args=arg_tup, method=self.optimizer,
                           jac=True, options=self.d_opt)  # run optimizer
         params_o = np.exp(optobj.x)  # convert to original form, and unpack
@@ -199,10 +200,21 @@ class RBFNetwork(Mapper):
         self.k_type = KernelType(self.kernel_name, params=self.d_params)
 
         if self.verbose:
-            logger.info("Final (params, noise): ({}, {}). Fitting weights...".format(self.d_params, self.noise))
+            logger.info("Final (params, noise): ({}, {}). Fitting weights...\n\n".format(self.d_params, self.noise))
         weights, X_t = self.fit_current(X, y)
         self.weights = weights
         return weights, X_t
+
+    def init_params(self):
+        """
+        Randomly initialize parameters.
+
+        :return: (nparams,) numpy array
+        """
+        # randomly initialize positive parameters and rescale to be small so as to not cause numerical issues
+        params = np.abs(self.random_state.randn(1, self.nparams).reshape((self.nparams,)))/np.sqrt(self.nparams)
+        params[-1] /= self.nparams  # make noise parameter even smaller: tends to be sensitive to large values
+        return unpack_params_nll(params, self.kernel_name)
 
     def fit_current(self, X, y):
         """
@@ -227,15 +239,18 @@ class RBFNetwork(Mapper):
         """
         return kernel(data1=self.centers, data2=X, k_type=self.k_type)
 
-    def predict(self, X, **kwargs):
+    def predict(self, X, weights_in=None):
         """
         Given data, make regression prediction using current weights,
         kernel, and centers.
 
         :param X: N x D numpy array
-        :param kwargs: optional arguments that are ignored for this class.
+        :param weights_in: make a prediction based on weights passed in directly by the user
         :return:
         """
-        return np.dot(self.weights, self.transform(X)).T
+        if weights_in is not None:
+            return np.dot(weights_in, self.transform(X)).T
+        else:
+            return np.dot(self.weights, self.transform(X)).T
 
 

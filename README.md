@@ -18,7 +18,7 @@ To get this repo, and to install all of the dependencies, run the following comm
 ```bash
 git clone https://github.com/hkingravi/funcobspy.git  # clone repo (https)
 cd funcobspy
-virtualenv funcenv  # create virtual environment with all the of dependencies required
+virtualenv -p python3 funcenv  # create virtual environment with all the of dependencies required
 source funcenv/bin/activate  # activate virtual environment
 pip install -U virtualenv  # upgrade virtualenv
 pip install -U pip  # upgrade pip: these upgrades are to avoid weird bugs in some installs
@@ -42,5 +42,9 @@ in the same directory as funcenv, or you can configure your Python IDE to use th
 way, all the library requirements will be met. If you want to roll your own version, just look at the
 requirements.txt file. 
 
+In Python 3.x on Ubuntu, sometimes you will need to fix the Tkinter module, as follows:
+```bash
+sudo apt-get install python3-tk
+```
 
 

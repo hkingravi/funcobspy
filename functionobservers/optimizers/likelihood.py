@@ -3,8 +3,8 @@ Module containing likelihoods for optimization purposes.
 """
 import numpy as np
 import functionobservers.mappers.kernel as fkernel
-from functionobservers.optimizers.linalg import solve_chol
-from functionobservers.utils import pack_params_nll, unpack_params_nll
+from functionobservers.optimizers.linalg_o import solve_chol
+from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
 from functionobservers.log_utils import configure_logger
 logger = configure_logger(level="INFO", name="funcobspy")
 

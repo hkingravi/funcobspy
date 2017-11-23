@@ -62,6 +62,9 @@ def pack_params_nll(d_params, noise, k_name):
             params[i] = d_params_copy["ell" + str(i+1)]
         params[nparams-2] = d_params_copy["nu"]
         params[nparams-1] = noise
+    elif k_name == "gaussian":
+        params[0] = d_params_copy["sigma"]
+        params[1] = noise
     else:
         raise ValueError("Kernel {} not supported.".format(k_name))
     return params
@@ -69,10 +72,13 @@ def pack_params_nll(d_params, noise, k_name):
 
 def unpack_params_nll(params, k_name):
     """
+    Function to k-dimensional vector of parameters to a dictionary and a noise float,
+    in an order-preserving fashion. Generally, the order doesn't matter, as
+    long as it's fixed.
 
-    :param params:
+    :param params: k-dimensional vector of parameters
     :param k_name: name of kernel
-    :return:
+    :return: dictionary of k-1 kernel parameters, and 1 observation noise parameter
     """
     nparams = params.shape[0]
     d_params = {}
@@ -81,6 +87,9 @@ def unpack_params_nll(params, k_name):
             d_params["ell" + str(i + 1)] = params[i]
         d_params["nu"] = params[nparams-2]
         noise = params[nparams-1]
+    elif k_name == "gaussian":
+        d_params["sigma"] = params[0]
+        noise = params[1]
     else:
         raise ValueError("Kernel {} not supported.".format(k_name))
     return d_params, noise
