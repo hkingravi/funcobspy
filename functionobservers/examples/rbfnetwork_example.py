@@ -1,10 +1,10 @@
 """
-Test negative log-likelihood for RBFNetwork and RandomKitchenSinks.
+Test RBFNetwork class with multiple kernels.
 """
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from functionobservers.mappers.mappers import RBFNetwork
+import functionobservers.mappers as fmap
 
 
 # load data
@@ -27,8 +27,8 @@ noise_i_gauss = 0.01
 opt_options = {'maxiter': 350, 'disp': False}
 
 # fit Gaussian RBFNetwork: same thing as squared exponential minus the nu parameter
-rbfn_gauss = RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_params=d_params_gauss, noise=noise_i_gauss,
-                        optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
+rbfn_gauss = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_params=d_params_gauss, noise=noise_i_gauss,
+                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
 rbfn_gauss.fit(X_tr, y_tr)
 preds_gauss = rbfn_gauss.predict(X_tr)
 
@@ -38,8 +38,8 @@ d_params_sqexp = {"ell1": 0.1, "nu": 0.2}
 noise_i_sqexp = 0.01
 
 # fit squared exponential RBFNetwork
-rbfn_sqexp = RBFNetwork(centers=centers_in, kernel_name=k_name_sqexp, d_params=d_params_sqexp, noise=noise_i_sqexp,
-                        optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
+rbfn_sqexp = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_sqexp, d_params=d_params_sqexp, noise=noise_i_sqexp,
+                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
 rbfn_sqexp.fit(X_tr, y_tr)
 preds_sqexp = rbfn_sqexp.predict(X_tr)
 # make prediction using random weights

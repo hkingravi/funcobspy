@@ -54,7 +54,7 @@ class KernelType(object):
         elif name == "sqexp":
             nparams = len(params.keys())
             key_list = ["nu"]
-            for i in xrange(nparams-1):
+            for i in range(0, nparams-1):
                 key_list.append("ell" + str(i+1))
             if not set(key_list).issubset(set(params.keys())):
                 logger.error("Incorrect number of parameters: see sqexp description in documentation.")

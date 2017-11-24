@@ -2,7 +2,8 @@
 Module containing likelihoods for optimization purposes.
 """
 import numpy as np
-import functionobservers.mappers.kernel as fkernel
+from functionobservers.mappers.mappers import KernelType
+from functionobservers.mappers.kernel import map_data_rbfnet, map_data_rks
 from functionobservers.optimizers.linalg_o import solve_chol
 from functionobservers.utils.func_utils import pack_params_nll, unpack_params_nll
 from functionobservers.log_utils import configure_logger
@@ -42,12 +43,12 @@ def negative_log_likelihood(param_vec, X, y, k_name, mapper_type, centers, verbo
     k_params = np.exp(param_vec[0:dim-1])
     noise = np.exp(2.0*param_vec[-1])  # take exp to avoid negative parameter scaling issues
     d_params, _ = unpack_params_nll(np.hstack([k_params, noise]), k_name)  # 'unpack' vector
-    k_type = fkernel.KernelType(name=k_name, params=d_params)
+    k_type = KernelType(name=k_name, params=d_params)
 
     if mapper_type == "RBFNetwork":
-        X_t, grads = fkernel.map_data_rbfnet(centers, k_type, X, return_grads=True)
+        X_t, grads = map_data_rbfnet(centers, k_type, X, return_grads=True)
     elif mapper_type == "RandomKitchenSinks":
-        X_t, grads = fkernel.map_data_rks(centers, k_type, X)
+        X_t, grads = map_data_rks(centers, k_type, X)
     else:
         logger.error(
             "Unexpected mapper_type {}: halting execution".format(mapper_type)

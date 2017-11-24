@@ -101,7 +101,7 @@ class FrozenDenseDNN(Mapper):
         input_layer = Dense(model_in.layers[0].output_dim, input_shape=(1,), init='normal', activation='relu',
                             weights=model_in.layers[0].get_weights(), trainable=False)
         model.add(input_layer)
-        for i in xrange(1, nlayers-1):
+        for i in range(1, nlayers-1):
             curr_layer = Dense(model_in.layers[i].output_dim, init='normal', activation='relu',
                                weights=model_in.layers[i].get_weights(), trainable=False)
             model.add(curr_layer)
@@ -117,7 +117,7 @@ class FrozenDenseDNN(Mapper):
         # map data manually
         mapped_data = data
         nlayers = len(self.model.layers)
-        for i in xrange(nlayers):
+        for i in range(0, nlayers):
             curr_layer = self.model.layers[i]
             mapped_data = curr_layer.activation(np.dot(mapped_data, curr_layer.get_weights()[0])
                                                 + curr_layer.get_weights()[1])
@@ -162,9 +162,11 @@ class RBFNetwork(Mapper):
         self.centers = centers
         self.kernel_name = kernel_name
         self.d_params = d_params
+        self.noise = noise
+        self.params = pack_params_nll(self.d_params, self.noise, self.kernel_name)  # keep representation of state
         self.nparams = len(self.d_params.keys()) + 1
         self.k_type = KernelType(self.kernel_name, params=self.d_params)
-        self.noise = noise
+
         self.optimizer = optimizer
         self.d_opt = d_opt
         self.random_state = check_random_state(random_state)  # make proper RandomState instance
@@ -174,13 +176,14 @@ class RBFNetwork(Mapper):
         self.weights = self.random_state.randn(1, self.ncent)  # randomly initialize weights
         self.verbose = verbose
 
-    def fit(self, X, y, reinit_params=True):
+    def fit(self, X, y, reinit_params=True, bounds=None):
         """
         Fit method for RBFNetwork: parameters are fitted using the negative log-likelihood.
 
         :param X: (nsamp, dim) numpy array of data
         :param y: ()
         :param reinit_params:
+        :param bounds: bounds for parameter search
         :return:
         """
         d_params_i, noise_i = self.init_params()  # reinitialize parameters to break symmetry
@@ -190,7 +193,7 @@ class RBFNetwork(Mapper):
         arg_tup = tuple([X, y, self.kernel_name, "RBFNetwork", self.centers, self.verbose])  # tuple for minimize
         params_i = np.log(pack_params_nll(d_params_i, noise_i, self.kernel_name))  # log to avoid numerical issues
         optobj = minimize(fun=negative_log_likelihood, x0=params_i, args=arg_tup, method=self.optimizer,
-                          jac=True, options=self.d_opt)  # run optimizer
+                          jac=True, options=self.d_opt, bounds=bounds)  # run optimizer
         params_o = np.exp(optobj.x)  # convert to original form, and unpack
         d_params_o, noise_o = unpack_params_nll(params_o, self.kernel_name)
 
@@ -198,6 +201,7 @@ class RBFNetwork(Mapper):
         self.d_params = d_params_o
         self.noise = noise_o
         self.k_type = KernelType(self.kernel_name, params=self.d_params)
+        self.params = pack_params_nll(self.d_params, self.noise, self.kernel_name)  # keep representation of state
 
         if self.verbose:
             logger.info("Final (params, noise): ({}, {}). Fitting weights...\n\n".format(self.d_params, self.noise))
