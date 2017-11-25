@@ -28,8 +28,9 @@ opt_options = {'maxiter': 350, 'disp': False}
 
 # fit Gaussian RBFNetwork: same thing as squared exponential minus the nu parameter
 rbfn_gauss = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_params=d_params_gauss, noise=noise_i_gauss,
-                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
-rbfn_gauss.fit(X_tr, y_tr)
+                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True, sort_mat=True)
+rand_inds = rs.permutation(X_tr.shape[0])  # randomly scramble data, to show sort works
+rbfn_gauss.fit(X_tr[rand_inds, :], y_tr[rand_inds, :])
 preds_gauss = rbfn_gauss.predict(X_tr)
 
 # now call negative likelihood with squared exponential kernel and parameters

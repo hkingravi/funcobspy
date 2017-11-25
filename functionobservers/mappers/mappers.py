@@ -141,7 +141,7 @@ class RBFNetwork(Mapper):
 
     """
     def __init__(self, centers, kernel_name, d_params, noise, optimizer, d_opt=None, random_state=None,
-                 verbose=False):
+                 sort_mat=False, verbose=False):
         """
 
         :param centers: M x D matrix of M centers
@@ -151,6 +151,8 @@ class RBFNetwork(Mapper):
         :param optimizer: string, method in minimize to use, e.g. "L-BFGS-B"
         :param d_opt:
         :param random_state: seed, or random state
+        :param sort_mat: boolean indicating whether data needs to be sorted. If the data is 1-dimensional,
+                         this can create informative plots.
         :param verbose: whether to print information to the console or not
         """
         if kernel_name not in SUPPORTED_RBFN_KERNELS:
@@ -158,8 +160,17 @@ class RBFNetwork(Mapper):
                     "choose one from {}".format(kernel_name, SUPPORTED_RBFN_KERNELS)
             logger.error(out_m)
             raise ValueError(out_m)
+        if not isinstance(sort_mat, bool):
+            logger.error(
+                "sort_mat must be a bool. Halting execution."
+            )
+            raise ValueError("sort_mat must be a bool. Halting execution.")
+        if not isinstance(verbose, bool):
+            logger.error(
+                "verbose must be a bool. Halting execution."
+            )
+            raise ValueError("verbose must be a bool. Halting execution.")
 
-        self.centers = centers
         self.kernel_name = kernel_name
         self.d_params = d_params
         self.noise = noise
@@ -171,21 +182,39 @@ class RBFNetwork(Mapper):
         self.d_opt = d_opt
         self.random_state = check_random_state(random_state)  # make proper RandomState instance
 
-        self.dim = self.centers.shape[1]
-        self.ncent = self.centers.shape[0]
-        self.weights = self.random_state.randn(1, self.ncent)  # randomly initialize weights
+        self.dim = centers.shape[1]
+        self.ncent = centers.shape[0]
+        self.sort_mat = sort_mat
         self.verbose = verbose
+
+        if self.dim == 1 and self.sort_mat:
+            if self.verbose:
+                logger.info(
+                    "Sorting centers..."
+                )
+            centers = np.sort(centers, axis=0)
+        self.centers = centers
+        self.weights = self.random_state.randn(1, self.ncent)  # randomly initialize weights
 
     def fit(self, X, y, reinit_params=True, bounds=None):
         """
         Fit method for RBFNetwork: parameters are fitted using the negative log-likelihood.
 
         :param X: (nsamp, dim) numpy array of data
-        :param y: ()
-        :param reinit_params:
+        :param y: (nsamp, 1) numpy array of observations
+        :param reinit_params: discard provided parameters, and initialize them randomly
         :param bounds: bounds for parameter search
         :return:
         """
+        if self.dim == 1 and self.sort_mat:
+            if self.verbose:
+                logger.info(
+                    "Sorting data..."
+                )
+            s_inds = np.argsort(X[:, 0])
+            X[:, 0] = X[s_inds, 0]
+            y[:, 0] = y[s_inds, 0]
+
         d_params_i, noise_i = self.init_params()  # reinitialize parameters to break symmetry
         if self.verbose:
             logger.info("Initial (params, noise): ({}, {})".format(self.d_params, self.noise))

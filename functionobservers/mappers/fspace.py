@@ -2,10 +2,12 @@
 Feature-space associated code.
 """
 import numpy as np
-import matplotlib.pyplot as plt
 from functionobservers.mappers import Mapper, unpack_params_nll
 from functionobservers.log_utils import configure_logger
 logger = configure_logger(level="INFO", name="funcobspy")
+
+
+SUPPORTED_MEAS = ['random', 'rational']
 
 
 class FeatureSpaceGenerator(object):
@@ -88,3 +90,47 @@ class FeatureSpaceGenerator(object):
             )
             raise RuntimeError("param_stream variable is None: cannot return parameters.")
 
+
+def measurement_operator(meas_type, nmeas, mapper, d_mopts, random_state):
+    """
+    Construct measurement operator in accordance with chosen scheme and
+    the Mapper object's transformation properties.
+
+    :param meas_type: type of measurement: choose from:
+                       - 'random': randomly select subset from data
+                       - 'rational': exploit rational canonical structure of
+                                     dynamics operator A.
+    :param nmeas: number of measurements to use
+    :param mapper: instance of Mapper: choose from 'RBFNetwork' and 'RandomKitchenSinks'.
+    :param d_mopts: dictionary of required matrices for meas_type:
+                    'random' requires 'data', an N x D data matrix.
+                    'rational' requires 'data', and 'A', an M x M dynamics matrix.
+    :param random_state: numpy RandomState object used for generating random samples.
+    :return: (Kmat, meas_basis, meas_inds): Kmat is an L x M measurement operator,
+             meas_basis is an L x D submatrix of data, and meas_inds are the indices
+             corresponding to the subset selection.
+    """
+    if meas_type not in SUPPORTED_MEAS:
+        logger.error(
+            "meas_type {} not supported: choose from {}.".format(meas_type, SUPPORTED_MEAS)
+        )
+        raise ValueError("meas_type {} not supported: choose from {}.".format(meas_type, SUPPORTED_MEAS))
+
+    if meas_type == "random":
+        rand_inds = random_state.permutation(d_mopts['data'].shape[0])
+        meas_inds = rand_inds[0:nmeas]
+        meas_basis = d_mopts['data'][meas_inds, :]
+
+        # sort basis if necessary
+        if mapper.sort_mat:
+            s_inds = np.argsort(meas_basis[:, 0])
+            meas_basis[:, 0] = meas_basis[s_inds, 0]
+            meas_inds = meas_inds[s_inds]
+        Kmat = mapper.transform(meas_basis)
+
+    elif meas_type == "rational":
+        logger.error(
+            "meas_type {} not currently implemented.".format(meas_type)
+        )
+        raise NotImplementedError("meas_type {} not currently implemented.".format(meas_type))
+    return Kmat, meas_basis, meas_inds
