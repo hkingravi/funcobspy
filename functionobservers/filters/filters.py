@@ -15,8 +15,8 @@ class KalmanFilter(object):
         """
         Constructor for KalmanFilter: initialize filter parameters.
 
-        :param P_init: m x m initial error covariance matrix
-        :param Q:  m x m process noise covariance matrix
+        :param P_init: M x M initial error covariance matrix
+        :param Q:  M x M process noise covariance matrix
         :param R: n x n measurement noise covariance matrix
         """
         # process matrices
@@ -35,8 +35,8 @@ class KalmanFilter(object):
         Fit filter with dynamics and measurement operators, and the
         initial state.
 
-        :param A: dynamics operator: m x m matrix
-        :param C: measurement operator: n x m matrix
+        :param A: dynamics operator: M x M matrix
+        :param C: measurement operator: N x M matrix
         :param m_init: current measurement vector
         :return:
         """
