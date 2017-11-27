@@ -36,7 +36,7 @@ opt_options = {'maxiter': 350, 'disp': False}
 rbfn_sort = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_params=d_params_gauss, noise=noise_i_gauss,
                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True, sort_mat=True)
 rbfn_nsort = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_params=d_params_gauss, noise=noise_i_gauss,
-                            optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True, sort_mat=False)
+                             optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True, sort_mat=False)
 
 d_mopts = dict()
 d_mopts['data'] = data

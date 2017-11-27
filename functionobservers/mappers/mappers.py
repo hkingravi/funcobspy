@@ -2,7 +2,6 @@
 Classes for mapping data from an input domain to a different feature space.
 Note that mappers must be trained.
 """
-import sys
 from abc import ABCMeta, abstractmethod
 from sklearn.utils import check_random_state
 from keras.models import Sequential
@@ -183,7 +182,7 @@ class RBFNetwork(Mapper):
         self.random_state = check_random_state(random_state)  # make proper RandomState instance
 
         self.dim = centers.shape[1]
-        self.ncent = centers.shape[0]
+        self.nbases = centers.shape[0]
         self.sort_mat = sort_mat
         self.verbose = verbose
 
@@ -194,7 +193,7 @@ class RBFNetwork(Mapper):
                 )
             centers = np.sort(centers, axis=0)
         self.centers = centers
-        self.weights = self.random_state.randn(1, self.ncent)  # randomly initialize weights
+        self.weights = self.random_state.randn(1, self.nbases)  # randomly initialize weights
 
     def fit(self, X, y, reinit_params=True, bounds=None):
         """
@@ -248,6 +247,15 @@ class RBFNetwork(Mapper):
         params = np.abs(self.random_state.randn(1, self.nparams).reshape((self.nparams,)))/np.sqrt(self.nparams)
         params[-1] /= self.nparams  # make noise parameter even smaller: tends to be sensitive to large values
         return unpack_params_nll(params, self.kernel_name)
+
+    def set_kernel_params(self, d_params):
+        """
+        Given dictionary of parameters, set kernel's parameters.
+
+        :param d_params:
+        :return:
+        """
+        self.k_type.params = d_params
 
     def fit_current(self, X, y):
         """

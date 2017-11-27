@@ -71,6 +71,7 @@ class FeatureSpaceGenerator(object):
             self.mapper.fit(data[:, :, i], obs[:, :, i], **kwargs)
             params[i, :] = self.mapper.params
         self.param_stream = params
+        return params
 
     def return_final_params(self):
         """

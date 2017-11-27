@@ -42,3 +42,20 @@ def configure_logger(level='INFO', name=None):
         logger_out.addHandler(sh)
 
     return logger_out
+
+
+def check_pos_int(v):
+    """
+    Check if positive integer. If float, cast as integer.
+
+    :param v:
+    :return:
+    """
+    status = True
+    try:
+        val = int(v)
+        if val <= 0:
+            status = False
+    except ValueError:
+        status = False
+    return status

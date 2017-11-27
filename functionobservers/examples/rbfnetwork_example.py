@@ -44,7 +44,7 @@ rbfn_sqexp = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_sqexp, d_par
 rbfn_sqexp.fit(X_tr, y_tr)
 preds_sqexp = rbfn_sqexp.predict(X_tr)
 # make prediction using random weights
-preds_r_sqexp = rbfn_sqexp.predict(X_tr, weights_in=rs.randn(1, rbfn_sqexp.ncent)/np.sqrt(rbfn_sqexp.ncent))
+preds_r_sqexp = rbfn_sqexp.predict(X_tr, weights_in=rs.randn(1, rbfn_sqexp.nbases) / np.sqrt(rbfn_sqexp.nbases))
 
 
 plt.figure(figsize=(10, 8))

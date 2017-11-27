@@ -1,1 +1,1 @@
-from filters import *
+from functionobservers.filters.filters import *
