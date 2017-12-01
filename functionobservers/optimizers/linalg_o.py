@@ -16,7 +16,7 @@ def solve_chol(L, B):
     :param B: linear system to solve, i.e. X = A\B
     :return: X
     """
-    return np.linalg.lstsq(L, np.linalg.lstsq(L.T, B)[0])[0]
+    return np.linalg.solve(L, np.linalg.solve(L.T, B))
 
 
 def solve_tikhinov(A, Y, reg_val):
@@ -34,7 +34,7 @@ def solve_tikhinov(A, Y, reg_val):
         raise InvalidSolveTikhinovInput("reg_val must be nonnegative.")
     jitter = 1e-7
     ncent = A.shape[1]
-    Pmat = np.dot(A.T, A) + reg_val*jitter*np.eye(ncent)
+    Pmat = np.dot(A.T, A) + (reg_val + jitter)*np.eye(ncent)
     L = np.linalg.cholesky(Pmat).T
     Ymat = np.dot(A.T, Y)
     return solve_chol(L, Ymat)

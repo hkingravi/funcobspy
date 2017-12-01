@@ -31,7 +31,7 @@ rbfn_gauss = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_gauss, d_par
                              optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True, sort_mat=True)
 rand_inds = rs.permutation(X_tr.shape[0])  # randomly scramble data, to show sort works
 rbfn_gauss.fit(X_tr[rand_inds, :], y_tr[rand_inds, :])
-preds_gauss = rbfn_gauss.predict(X_tr)
+preds_gauss, _ = rbfn_gauss.predict(X_tr)
 
 # now call negative likelihood with squared exponential kernel and parameters
 k_name_sqexp = "sqexp"
@@ -42,9 +42,9 @@ noise_i_sqexp = 0.01
 rbfn_sqexp = fmap.RBFNetwork(centers=centers_in, kernel_name=k_name_sqexp, d_params=d_params_sqexp, noise=noise_i_sqexp,
                              optimizer="L-BFGS-B", d_opt=opt_options, random_state=rs, verbose=True)
 rbfn_sqexp.fit(X_tr, y_tr)
-preds_sqexp = rbfn_sqexp.predict(X_tr)
+preds_sqexp, _ = rbfn_sqexp.predict(X_tr)
 # make prediction using random weights
-preds_r_sqexp = rbfn_sqexp.predict(X_tr, weights_in=rs.randn(1, rbfn_sqexp.nbases) / np.sqrt(rbfn_sqexp.nbases))
+preds_r_sqexp, _ = rbfn_sqexp.predict(X_tr, weights_in=rs.randn(1, rbfn_sqexp.nbases) / np.sqrt(rbfn_sqexp.nbases))
 
 
 plt.figure(figsize=(10, 8))

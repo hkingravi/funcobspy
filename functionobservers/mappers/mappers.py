@@ -41,6 +41,10 @@ class Mapper:
     def predict(self, data, **kwargs):
         pass
 
+    @abstractmethod
+    def set_params(self, **kwargs):
+        pass
+
 
 class DNN(Mapper):
     def __init__(self, **kwargs):
@@ -179,7 +183,7 @@ class RBFNetwork(Mapper):
 
         self.optimizer = optimizer
         self.d_opt = d_opt
-        self.random_state = check_random_state(random_state)  # make proper RandomState instance
+        self.random_state = random_state  # check_random_state(random_state)  # make proper RandomState instance
 
         self.dim = centers.shape[1]
         self.nbases = centers.shape[0]
@@ -248,14 +252,16 @@ class RBFNetwork(Mapper):
         params[-1] /= self.nparams  # make noise parameter even smaller: tends to be sensitive to large values
         return unpack_params_nll(params, self.kernel_name)
 
-    def set_kernel_params(self, d_params):
+    def set_params(self, d_kernel_params, noise):
         """
-        Given dictionary of parameters, set kernel's parameters.
+        Given dictionary of kernel parameters and noise, set model's parameters.
 
-        :param d_params:
+        :param d_kernel_params:
+        :param noise:
         :return:
         """
-        self.k_type.params = d_params
+        self.k_type.params = d_kernel_params
+        self.noise = noise
 
     def fit_current(self, X, y):
         """
@@ -289,9 +295,9 @@ class RBFNetwork(Mapper):
         :param weights_in: make a prediction based on weights passed in directly by the user
         :return:
         """
+        K = self.transform(X)
         if weights_in is not None:
-            return np.dot(weights_in, self.transform(X)).T
+            return np.dot(weights_in, K).T, K
         else:
-            return np.dot(self.weights, self.transform(X)).T
-
+            return np.dot(self.weights, K).T, K
 

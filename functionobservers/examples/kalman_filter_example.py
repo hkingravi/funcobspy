@@ -5,7 +5,7 @@ Plot an example of a Kalman filter.
 import numpy as np
 import matplotlib.pyplot as plt
 from functionobservers.filters import KalmanFilter
-from functionobservers.utils import pack_state, unpack_state
+from functionobservers.utils.func_utils import pack_state, unpack_state
 
 # plot parameters
 f_lwidth = 3
@@ -52,7 +52,7 @@ meas_kalman = np.zeros((nmeas, time_steps))
 curr_state = m_init
 
 # generate measurements
-for i in xrange(time_steps):
+for i in range(time_steps):
     meas_noisy[:, i] = pack_state(np.dot(C, curr_state) + np.dot(RL, np.random.randn(nmeas, 1)))
     meas_actual[:, i] = pack_state(np.dot(C, curr_state))
 

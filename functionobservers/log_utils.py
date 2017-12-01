@@ -59,3 +59,20 @@ def check_pos_int(v):
     except ValueError:
         status = False
     return status
+
+
+def check_pos_float(v):
+    """
+    Check if positive float.
+
+    :param v:
+    :return:
+    """
+    status = True
+    try:
+        val = float(v)
+        if val <= 0:
+            status = False
+    except ValueError:
+        status = False
+    return status

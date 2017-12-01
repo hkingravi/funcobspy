@@ -17,7 +17,7 @@ def animate_orig_data(ii):
 
 
 # set seed
-rs = np.random.RandomState(seed=0)
+rs = np.random.RandomState(seed=30)
 
 # time-varying data arises from weight set associated to an RBF network
 orig_function_dim = 5
@@ -44,7 +44,7 @@ nsamp_plot = nsteps  # number of samples for plotting
 data = np.linspace(data_start, data_end, nsamp).reshape((nsamp, 1))  # where the function values are sampled from
 
 # run simulation
-scheme = "switching"
+scheme = "smooth3"
 times = np.zeros((nsteps,))
 ideal_weight_trajectory = np.zeros((nsteps, orig_function_dim))
 orig_func_vals = np.zeros((nsamp, 1, nsteps))
@@ -60,8 +60,8 @@ for i in range(0, nsteps):
 for i in range(0, nsteps):
     weights = time_varying_uncertainty(weights_star=pack_state(weights), t=times[i],
                                        scheme=scheme).reshape((1, orig_function_dim))
-    orig_func = model.predict(data, weights_in=weights)
-    orig_func_plot = model.predict(eval_data, weights_in=weights)
+    orig_func, _ = model.predict(data, weights_in=weights)
+    orig_func_plot, _ = model.predict(eval_data, weights_in=weights)
     orig_obs = orig_func + noise*rs.randn(orig_func.shape[0], orig_func.shape[1])
 
     # store function values for plotting
