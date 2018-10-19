@@ -14,6 +14,7 @@ logger = configure_logger(level="INFO", name="funcobspy")
 # load time series data
 scheme = "smooth3"
 data_dir = "./data"
+save_dir = "./results"
 f_prefix = "synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme"
 d_data = pickle.load(open(os.path.join(data_dir, f_prefix + "_" + scheme + ".pkl"), "rb"))
 
@@ -22,11 +23,8 @@ logger.info(
                                                                           d_data['orig_func_obs'].shape)
 )
 
-
 func_data = d_data['orig_func_data']
 func_obs = d_data['orig_func_obs']
-
-
 nsteps = func_data.shape[2]
 
 # create series training and testing
@@ -45,10 +43,7 @@ centers_in = np.linspace(np.min(np.min(func_data[:, :, 0])),
 ncent = centers_in.shape[0]
 centers_in = np.reshape(centers_in, (ncent, 1))
 k_name = "gaussian"
-
-# make data zero mean: important for dynamics
-#for i in range(0, nsteps):
-#    func_data[:, :, i] = func_data[:, :, i] - np.mean(func_data[:, :, i])
+s_fmap = "RBFNetwork"
 
 # bounds for each parameter plus noise: necessary to avoid blowup
 if k_name == "gaussian":
@@ -88,6 +83,10 @@ logger.info(
                                                                kobs.mapper.noise)
 )
 
+logger.info(
+    "Making predictions on training data..."
+)
+s_t = time.time()
 nsamp_tr = func_data_tr.shape[2]
 preds_ideal = np.zeros(func_obs_tr.shape)
 rms_error_tr = np.zeros((nsamp_tr,))
@@ -97,7 +96,15 @@ for i in range(0, nsteps_tr):
     f_ideal, _ = kobs.mapper.predict(func_data_te[:, :, i], weights_in=est_weights[i, :].reshape((1, nbases)))
     preds_ideal[:, :, i] = f_ideal
     rms_error_tr[i] = np.linalg.norm(preds_ideal[:, :, i] - func_obs_tr[:, :, i])/np.sqrt(preds_ideal.shape[0])
+logger.info(
+    "Time taken to make predictions on data, observations of shapes "
+    "({}, {}): {:.2f} seconds.".format(func_data_tr.shape, func_obs_tr.shape, time.time()-s_t)
+)
 
+logger.info(
+    "Making predictions on testing data..."
+)
+s_t = time.time()
 nsamp_te = func_data_te.shape[2]
 rms_error_te = np.zeros((nsamp_te,))
 preds = np.zeros(func_obs_te.shape)
@@ -109,6 +116,21 @@ for i in range(0, nsamp_te):
     # utilize measurements from certain locations to correct observer state
     current_meas = func_obs_te[meas_inds, :, i]  # + rs.randn(nmeas, 1)
     kobs.update(current_meas.T)
+logger.info(
+    "Time taken to make predictions on data, observations of shapes "
+    "({}, {}): {:.2f} seconds.".format(func_data_te.shape, func_obs_te.shape, time.time()-s_t)
+)
+
+
+# save file names
+post = "{}_nbases_{}_{}_{}.png".format(s_fmap, nbases, k_name, scheme)
+fig_ps = os.path.join(save_dir, "param_stream_{}".format(post))
+fig_rms_tr = os.path.join(save_dir, "rms_tr_{}".format(post))
+fig_rms_te = os.path.join(save_dir, "rms_te_{}".format(post))
+fig_plt_tr = os.path.join(save_dir, "plt_tr_{}".format(post))
+fig_plt_te = os.path.join(save_dir, "plt_te_{}".format(post))
+fig_dyn = os.path.join(save_dir, "dyn_{}".format(post))
+fig_meas = os.path.join(save_dir, "meas_{}".format(post))
 
 if k_name == "sqexp":
     figsize = (12, 16)
@@ -146,63 +168,70 @@ else:
     plt.xlabel('Time step')
     plt.ylabel('Noise')
     plt.title("Noise parameter over train time")
+plt.savefig(fig_ps)
 
 plt.figure()
 plt.plot(steps[0:nsteps_tr], rms_error_tr)
 plt.xlabel('Time step')
 plt.ylabel('RMS Error')
 plt.title("RMS prediction error over training time")
+plt.savefig(fig_rms_tr)
 
 plt.figure()
 plt.plot(steps[nsteps_tr:-1], rms_error_te)
 plt.xlabel('Time step')
 plt.ylabel('RMS Error')
 plt.title("RMS prediction error over testing time")
+plt.savefig(fig_rms_te)
 
-fig2 = plt.figure(figsize=figsize)
+fig2 = plt.figure(figsize=(12, 6))
 nobs = preds_ideal.shape[0]
 preds_ideal = preds_ideal.reshape((nobs, nsteps_tr))
 func_obs_tr = func_obs_tr.reshape((nobs, nsteps_tr))
-ax2a = fig2.add_subplot(211)
+ax2a = fig2.add_subplot(121)
 im2a = ax2a.imshow(func_obs_tr, cmap='jet')
 plt.colorbar(im2a)
 plt.title('Time series (train, clean)')
-ax2b = fig2.add_subplot(212)
+ax2b = fig2.add_subplot(122)
 im2b = ax2b.imshow(preds_ideal, cmap='jet')
 plt.colorbar(im2b)
 plt.title('Time series ideal predictions (train)')
 plt.suptitle("Plot of ideal predicted time series")
+plt.savefig(fig_plt_tr)
 
-fig3 = plt.figure(figsize=figsize)
+fig3 = plt.figure(figsize=(12, 6))
 nobs = preds.shape[0]
 nsteps_te = preds.shape[2]
 preds = preds.reshape((nobs, nsteps_te))
 func_obs_te = func_obs_te.reshape((nobs, nsteps_te))
-ax3a = fig3.add_subplot(211)
+ax3a = fig3.add_subplot(121)
 im3a = ax3a.imshow(func_obs_te, cmap='jet')
-plt.colorbar(im2a)
+plt.colorbar(im3a, fraction=0.046, pad=0.04)
 plt.title('Time series (test, clean)')
-ax3b = fig3.add_subplot(212)
+ax3b = fig3.add_subplot(122)
 im3b = ax3b.imshow(preds, cmap='jet')
-plt.colorbar(im3b)
+plt.colorbar(im3b, fraction=0.046, pad=0.04)
 plt.title('Time series observer predictions (test)')
 plt.suptitle("Plot of actual vs predicted time series")
+plt.savefig(fig_plt_te)
 
-fig4 = plt.figure(figsize=(16, 16))
+fig4 = plt.figure()
 ax4a = fig4.add_subplot(111)
 im4a = ax4a.imshow(np.absolute(kobs.filter.A), cmap='jet')
-plt.colorbar(im2a)
+plt.colorbar(im4a, fraction=0.046, pad=0.04)
 plt.title('Dynamics operator (abs)')
 plt.xlabel('Basis')
 plt.ylabel('Basis')
+plt.savefig(fig_dyn)
 
-fig5 = plt.figure(figsize=figsize)
+fig5 = plt.figure()
 ax5a = fig5.add_subplot(111)
 im5a = ax5a.imshow(kobs.filter.C, cmap='jet')
-plt.colorbar(im5a)
+plt.colorbar(im5a, fraction=0.046, pad=0.04)
 plt.xlabel('Basis')
 plt.ylabel('Measurements')
 plt.title('Measurement operator')
+plt.savefig(fig_meas)
 
 plt.show()
 
