@@ -13,8 +13,18 @@ logger = configure_logger(level="INFO", name="funcobspy")
 
 # load time series data
 scheme = "smooth3"
-data_dir = "./data"
-save_dir = "./results"
+cwd = os.getcwd()
+
+data_dir = os.path.join(cwd, "data")
+save_dir = os.path.join(cwd, "results")
+
+if not os.path.exists(data_dir):
+    logger.error("Data directory does not exist! Halting execution")
+    raise RuntimeError("Data directory does not exist! Halting execution.")
+if not os.path.exists(save_dir):
+    logger.warning("Save directory does not exist: making directory {}.".format(save_dir))
+    os.makedirs(save_dir)
+
 f_prefix = "synthetic_time_series_generator_RBFNetwork_kernel_gaussian_scheme"
 d_data = pickle.load(open(os.path.join(data_dir, f_prefix + "_" + scheme + ".pkl"), "rb"))
 
